@@ -131,18 +131,49 @@ FINAL ANSWER (in {user_language}):
 
     return answer, api_context
 
-# The CLI entry point can remain for testing
+# # Simple CLI in English
+# if __name__ == "__main__":
+#     import sys
+#     if len(sys.argv) < 2:
+#         print("Usage: python rag.py '<your question here>'")
+#         sys.exit(1)
+#     query = sys.argv[1]
+#     print(f"\n🔍 Query: {query}\n")
+#     answer, context = answer_question(query)
+#     print("\n💡 Answer:\n")
+#     print(answer)
+
+# Multilanguage CLI
 if __name__ == "__main__":
-    import sys
-    if len(sys.argv) < 2:
-        print("Usage: python rag.py '<your question here>'")
-        sys.exit(1)
-    query = sys.argv[1]
-    print(f"\n🔍 Query: {query}\n")
-    answer, context = answer_question(query)
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Query the RAG pipeline directly from your terminal.",
+        formatter_class=argparse.RawTextHelpFormatter
+    )
+
+    parser.add_argument(
+        "query",
+        type=str,
+        help="The question you want to ask, enclosed in quotes."
+    )
+
+    # Optional '--lang' flag for language selection
+    parser.add_argument(
+        "--lang",
+        type=str,
+        default='en',
+        choices=['en', 'es', 'it'],
+        help="The language of the query.\n"
+             "  'en' for English (default)\n"
+             "  'es' for Spanish\n"
+             "  'it' for Italian"
+    )
+
+    args = parser.parse_args()
+
+    print(f"\n🔍 Query: {args.query} (Language: {args.lang})\n")
+    answer, context = answer_question(args.query, user_language=args.lang)
+
     print("\n💡 Answer:\n")
     print(answer)
-
-
-# How to use from terminal (in the same folder as rag.py):
-# python rag.py "Who are the authors of paper X?"

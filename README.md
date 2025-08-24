@@ -249,9 +249,103 @@ After that, start the application (and the database) again.
 
 ## Using the application
 
-When the application is running, we can start using it.
+When the application is running, you can start using it.
+
 
 ### CLI
+
+
+### Using the RAG CLI
+
+You can query the RAG pipeline directly from your terminal. This is useful for quick tests and scripting.
+
+**Prerequisites:** *Ensure you have completed the setup steps and activated the virtual environment before running these commands.*
+
+#### Usage
+
+```bash
+# First, activate the environment
+pipenv shell
+
+# Then, run the script
+python knowledge_base_assistant/rag.py [options] "Your question goes here"
+```
+
+#### Arguments and Options
+
+*   **`query`** (Required): The question you want to ask. It must be the last argument and should be enclosed in quotes.
+*   **`--lang {en,es,it}`** (Optional): Specifies the language of the query.
+    *   `en`: English (default)
+    *   `es`: Spanish
+    *   `it`: Italian
+*   **`-h, --help`**: Shows the help message with all available options.
+
+---
+#### Basic Examples
+
+*   **English Query (Default):**
+    ```bash
+    python knowledge_base_assistant/rag.py "What is the main conclusion of the document about AI?"
+    ```
+
+*   **Spanish Query:**
+    ```bash
+    python knowledge_base_assistant/rag.py --lang es "¿Cuándo se publicaron los artículos?"
+    ```
+
+*   **Italian Query:**
+    ```bash
+    python knowledge_base_assistant/rag.py --lang it "Chi sono gli autori del documento sull'IA?"
+    ```
+
+---
+#### Detailed Examples with Output
+
+##### **Example 1: Content Query**
+
+*Command:*
+```bash
+python knowledge_base_assistant/rag.py "What is the main conclusion of the document about AI?"
+```
+
+*Expected Output:*
+```bash
+✅ Loaded existing index from '/workspaces/knowledge-base-assistant/data/data_index.bin'
+
+🔍 Query: What is the main conclusion of the document about AI? (Language: en)
+
+--> Performing standard content search.
+
+💡 Answer:
+
+The main conclusion of the document emphasizes that the methodologies implemented have led to significant improvements in human performance within organizations. The success of these improvements will depend on tailored implementation strategies and the application of coaching methods. Additionally, the document highlights the importance of measuring performance outcomes through statistical models, which is uncommon in human safety and engineering programs.
+```
+
+---
+##### **Example 2: Metadata Query**
+
+*Command:*
+```bash
+python knowledge_base_assistant/rag.py --lang es "¿Cuándo se publicaron los artículos?"
+```
+
+*Expected Output:*
+```bash
+✅ Loaded existing index from '/workspaces/knowledge-base-assistant/data/data_index.bin'
+
+🔍 Query: ¿Cuándo se publicaron los artículos? (Language: es)
+
+--> Original Query (es): ¿Cuándo se publicaron los artículos?
+--> Translated English Query: When were the articles published?
+--> Detected a metadata query. Retrieving metadata.
+
+💡 Answer:
+
+Los artículos se publicaron en los años 2023 y 2024.
+```
+
+
+### Using the application CLI
 
 We built an interactive CLI application using
 [questionary](https://questionary.readthedocs.io/en/stable/).
@@ -351,21 +445,21 @@ We also have some code in the project root directory:
 
 ### Interface
 
-We use Flask for serving the application as an API.
+Flask is used for serving the application as an API.
 
 Refer to the ["Using the Application" section](#using-the-application)
 for examples on how to interact with the application.
 
 ### Ingestion
 
-The ingestion script is in [`ingest.py`](fitness_assistant/ingest.py).
+The ingestion script is in [`ingest.py`](knowledge_base_assistant/ingest.py).
 
-Since we use an in-memory database, `minsearch`, as our
-knowledge base, we run the ingestion script at the startup
+Since an in-memory database is used, `minsearch`, as the
+knowledge base, the ingestion script is run at the startup
 of the application.
 
-It's executed inside [`rag.py`](fitness_assistant/rag.py)
-when we import it.
+It's executed inside [`rag.py`](knowledge_base_assistant/rag.py)
+when imported.
 
 ## Experiments
 
@@ -476,9 +570,6 @@ For more information, visit the [official Flask documentation](https://flask.pal
 
 ## Acknowledgements 
 
-I thank the course participants for all your energy
-and positive feedback as well as the course sponsors for
-making it possible to run this course for free. 
-
-I hope you enjoyed doing the course =)
-
+I wish to thank the UCM-ntic staff for the Master in Data Science, Big Data & Business Analytics (2024-2025).
+Your exceptional organization and insightful content provided a vital foundation and ignited a passion for 
+further exploration into Data Science, AI, and state-of-the-art technologies.
