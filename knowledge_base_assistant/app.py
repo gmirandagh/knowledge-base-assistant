@@ -5,6 +5,8 @@ import uuid
 import rag  # rag.py
 
 app = Flask(__name__)
+app.config['JSON_SORT_KEYS'] = False
+
 # swagger = Swagger(app)
 babel = Babel(app)
 
@@ -15,16 +17,16 @@ babel = Babel(app)
 
 # User's language
 def get_locale():
-    # 1. Check for language cookie
+    # 1. Language cookie
     lang = request.cookies.get('lang')
     if lang in ['en', 'es', 'it']:
         return lang
-    # 2. If no cookie, fall back to the browser's header
+    # 2. Browser's header
     return request.accept_languages.best_match(['en', 'es', 'it'])
 
 babel = Babel(app, locale_selector=get_locale)
 
-# Run before each request to set language
+# Run before request to set language
 @app.before_request
 def before_request():
     g.locale = str(get_locale())
@@ -38,16 +40,16 @@ def set_language(lang):
     response.set_cookie('lang', lang, max_age=30*24*60*60)
     return response
 
-# Web page from the root URL
+# Web page from root URL
 @app.route('/')
 def home():
     """Renders the main question-answering web page."""
     return render_template('index.html')
 
 
-# --- API Endpoints ---
+# API Endpoints
 
-# --- 1. Ask a question ---
+# 1. Ask question
 @app.route('/ask', methods=['POST'])
 def ask_question():
     """
@@ -109,13 +111,13 @@ def ask_question():
     data = request.get_json()
     question = data.get("question")
     
-    # Get user's language
+    # User's language
     user_language = g.get('locale', 'en')
 
     if not question:
         return jsonify({"error": "Missing 'question'"}), 400
 
-    # Pass detected language to RAG
+    # Pass language to RAG
     answer, context = rag.answer_question(question, user_language=user_language)
     
     conversation_id = str(uuid.uuid4())
@@ -128,7 +130,7 @@ def ask_question():
     })
 
 
-# --- 2. Submit feedback ---
+# 2. Submit feedback
 @app.route('/feedback', methods=['POST'])
 def submit_feedback():
     """

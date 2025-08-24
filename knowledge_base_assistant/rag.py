@@ -23,28 +23,34 @@ def search(query, filter_dict=None):
     )
     return results
 
+
 def llm(prompt, model='gpt-4o-mini'):
-    """Wrapper for OpenAI LLM calls with error handling."""
+    """Wrapper for OpenAI LLM calls with robust error and None handling."""
     try:
         response = client.chat.completions.create(
             model=model,
             messages=[{"role": "user", "content": prompt}]
         )
-        return response.choices[0].message.content
+        
+        content = response.choices[0].message.content
+        
+        # Check content
+        if content is None or not content.strip():
+            return "The model did not provide a valid response."
+            
+        return content
+
     except Exception as e:
         return f"⚠️ LLM call failed: {e}"
 
-# --- Main RAG Entry Point (Refactored and Improved) ---
+
 
 def answer_question(question, user_language='en', model='gpt-4o-mini'):
     """
-    Advanced, hybrid RAG function that handles multiple languages robustly.
-    1. Translates the query to English.
-    2. Checks for metadata keywords in the *English* query.
-    3. Executes the correct path (metadata or content search).
-    4. Generates the final answer in the user's original language.
+    Advanced, hybrid RAG function that handles multiple languages robustly
+    and returns a clean, curated API context.
     """
-    # Step 1: Translate query to English to standardize the logic
+    # Step 1: Translate to English
     if user_language != 'en':
         translation_prompt = f'Translate the following user question into a concise English search query: "{question}"'
         english_query = llm(translation_prompt, model='gpt-4o-mini')
@@ -53,7 +59,7 @@ def answer_question(question, user_language='en', model='gpt-4o-mini'):
     else:
         english_query = question
 
-    # Step 2: Perform metadata check on the standardized English query
+    # Step 2: Check metadata
     metadata_keywords = ['author', 'authors', 'year', 'published', 'title', 'document id']
     is_metadata_query = any(keyword in english_query.lower() for keyword in metadata_keywords)
     
@@ -62,7 +68,6 @@ def answer_question(question, user_language='en', model='gpt-4o-mini'):
 
     if is_metadata_query:
         print("--> Detected a metadata query. Retrieving metadata.")
-        # This path is for questions about authors, years, etc.
         PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
         data_path = os.path.join(PROJECT_ROOT, 'data', 'data.jsonl')
 
@@ -78,58 +83,73 @@ def answer_question(question, user_language='en', model='gpt-4o-mini'):
             title = meta.get('title')
             if title and title not in papers_metadata:
                 papers_metadata[title] = meta
-                api_context.append({"type": "metadata", **meta})
+                api_context.append({
+                    "type": "metadata",
+                    "title": meta.get("title", "N/A"),
+                    "authors": meta.get("authors", []),
+                    "year": meta.get("year", "N/A")
+                })
 
         context_for_llm = json.dumps(list(papers_metadata.values()), indent=2)
-
+        
         final_prompt = f"""
-You are a research assistant. Answer the user's question based *only* on the provided METADATA.
+You are a research assistant. Your task is to answer the user's question based *only* on the provided structured METADATA.
+Perform any necessary analysis, such as counting or listing, to answer accurately.
 Formulate your final answer in {user_language}.
 
 USER'S QUESTION (Original): {question}
+
 METADATA:
 ---
 {context_for_llm}
 ---
-FINAL ANSWER (in {user_language}):
+
+Based on the metadata, here is the answer in {user_language}:
 """.strip()
         answer = llm(final_prompt, model=model)
 
     else:
         print("--> Performing standard content search.")
-        # This path is for questions about the content of documents
         search_results = search(english_query)
         if not search_results:
-            # Create a user-friendly message in their language
-            if user_language == 'es':
-                answer = "No pude encontrar información relevante en los documentos para esa consulta."
-            elif user_language == 'it':
-                answer = "Non sono riuscito a trovare informazioni pertinenti nei documenti per quella query."
-            else:
-                answer = "I could not find any relevant information in the documents for that query."
-            return answer, []
+            return "Could not find relevant information.", []
 
         context_for_llm_parts = []
         for doc in search_results:
-            api_context.append({"type": "content", **doc})
+            api_context.append({
+                "type": "content",
+                "title": doc.get("title", "N/A"),
+                "section_title": doc.get("section_title", "N/A"),
+                "page_number": doc.get("page_number", "N/A"),
+                "content": doc.get("text", "")
+            })
             context_for_llm_parts.append(f"Source: {doc.get('title')}\nContent: {doc.get('text')}")
         
         context_for_llm = "\n\n---\n\n".join(context_for_llm_parts)
-
+        
         final_prompt = f"""
-You are an expert assistant. Answer the user's question based *only* on the provided CONTEXT.
-Formulate your final answer in {user_language}.
+You are an expert assistant. Your task is to synthesize a clear and concise answer to the user's question based *only* on the provided CONTEXT. Do not use any outside knowledge.
+
+Follow these steps:
+1. Carefully read the USER'S QUESTION to understand what they are asking for.
+2. Read through all the CONTEXT provided.
+3. Identify the key pieces of information in the CONTEXT that directly answer the USER'S QUESTION.
+4. Synthesize these pieces of information into a single, coherent answer.
+5. Formulate your final answer in {user_language}.
 
 USER'S QUESTION (Original): {question}
+
 CONTEXT:
 ---
 {context_for_llm}
 ---
-FINAL ANSWER (in {user_language}):
+
+Based on the context, here is the synthesized answer in {user_language}:
 """.strip()
         answer = llm(final_prompt, model=model)
 
     return answer, api_context
+
 
 # # Simple CLI in English
 # if __name__ == "__main__":
@@ -142,6 +162,7 @@ FINAL ANSWER (in {user_language}):
 #     answer, context = answer_question(query)
 #     print("\n💡 Answer:\n")
 #     print(answer)
+
 
 # Multilanguage CLI
 if __name__ == "__main__":

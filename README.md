@@ -388,7 +388,7 @@ To ask a question, send a POST request to the `/ask` endpoint with your question
 ```bash
 # Define variables
 URL="http://localhost:5000"
-QUESTION="What is the main conclusion of the document about AI?"
+QUESTION="What are the elements of Situational Awareness?"
 DATA='{
     "question": "'"${QUESTION}"'"
 }'
