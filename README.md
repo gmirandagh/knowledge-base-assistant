@@ -376,56 +376,80 @@ pipenv run python test.py
 It will pick a random question from the ground truth dataset
 and send it to the app.
 
-### CURL
 
-You can also use `curl` for interacting with the API:
+### Interacting with the API via cURL
+
+You can interact directly with the Flask API using `curl` or any other API client. The API is served at `http://localhost:5000` when running the application locally.
+
+#### 1. Asking a Question
+
+To ask a question, send a POST request to the `/ask` endpoint with your question in the JSON body.
 
 ```bash
-URL=http://localhost:5000
-QUESTION="Is the Lat Pulldown considered a strength training activity, and if so, why?"
+# Define variables
+URL="http://localhost:5000"
+QUESTION="What is the main conclusion of the document about AI?"
 DATA='{
-    "question": "'${QUESTION}'"
+    "question": "'"${QUESTION}"'"
 }'
 
+# Send the request
 curl -X POST \
     -H "Content-Type: application/json" \
     -d "${DATA}" \
-    ${URL}/question
+    "${URL}/ask"
 ```
 
-You will see something like the following in the response:
+The API will respond with the answer, a unique conversation ID, and the sources used for the context:
 
 ```json
 {
-    "answer": "Yes, the Lat Pulldown is considered a strength training activity. This classification is due to it targeting specific muscle groups, specifically the Latissimus Dorsi and Biceps, which are essential for building upper body strength. The exercise utilizes a machine, allowing for controlled resistance during the pulling action, which is a hallmark of strength training.",
-    "conversation_id": "4e1cef04-bfd9-4a2c-9cdd-2771d8f70e4d",
-    "question": "Is the Lat Pulldown considered a strength training activity, and if so, why?"
+    "question": "What is the main conclusion of the document about AI?",
+    "answer": "The main conclusion of the document emphasizes that the methodologies implemented have led to significant improvements in human performance within organizations. The success of these improvements will depend on tailored implementation strategies and the application of coaching methods.",
+    "context": [
+        {
+            "content": "The document highlights the importance of measuring performance outcomes through statistical models, which is uncommon in human safety and engineering programs...",
+            "document_id": "doc_1",
+            "page_number": "5",
+            "section_title": "Conclusion",
+            "title": "Improving Human Performance in Organizations",
+            "type": "content"
+        }
+    ],
+    "conversation_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef"
 }
 ```
 
-Sending feedback:
+#### 2. Submitting Feedback
+
+To submit feedback for an answer you received, send a POST request to the `/feedback` endpoint. You'll need the `conversation_id` from the previous response.
 
 ```bash
-ID="4e1cef04-bfd9-4a2c-9cdd-2771d8f70e4d"
-URL=http://localhost:5000
+# Define variables
+URL="http://localhost:5000"
+CONVERSATION_ID="a1b2c3d4-e5f6-7890-1234-567890abcdef"
 FEEDBACK_DATA='{
-    "conversation_id": "'${ID}'",
+    "conversation_id": "'"${CONVERSATION_ID}"'",
     "feedback": 1
 }'
 
+# Send the request
 curl -X POST \
     -H "Content-Type: application/json" \
     -d "${FEEDBACK_DATA}" \
-    ${URL}/feedback
+    "${URL}/feedback"
 ```
 
-After sending it, you'll receive the acknowledgement:
+After submitting, you will receive an acknowledgment:
 
 ```json
 {
-    "message": "Feedback received for conversation 4e1cef04-bfd9-4a2c-9cdd-2771d8f70e4d: 1"
+    "conversation_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+    "feedback": 1,
+    "status": "feedback received"
 }
 ```
+
 
 ## Code
 

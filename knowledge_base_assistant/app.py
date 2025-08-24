@@ -121,9 +121,10 @@ def ask_question():
     conversation_id = str(uuid.uuid4())
 
     return jsonify({
-        "conversation_id": conversation_id,
+        "question": question,
         "answer": answer,
-        "context": context
+        "context": context,
+        "conversation_id": conversation_id
     })
 
 
@@ -173,9 +174,9 @@ def submit_feedback():
         return jsonify({"error": "Missing or invalid parameters"}), 400
 
     return jsonify({
-        "status": "feedback received",
         "conversation_id": conversation_id,
-        "feedback": feedback
+        "feedback": feedback,
+        "status": "feedback received"
     })
 
 
