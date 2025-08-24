@@ -1,0 +1,90 @@
+# Italian translations for PROJECT.
+# Copyright (C) 2025 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2025.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2025-08-23 23:40+0000\n"
+"PO-Revision-Date: 2025-08-23 23:55+0000\n"
+"Last-Translator: Your Name <you@example.com>\n"
+"Language-Team: Italian\n"
+"Language: it\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.17.0\n"
+
+#: templates/index.html:7 templates/index.html:32
+msgid "Knowledge Base Assistant"
+msgstr "Assistente Base di Conoscenza"
+
+#: templates/index.html:34
+msgid "Ask a question..."
+msgstr "Fai una domanda..."
+
+#: templates/index.html:35 templates/index.html:64
+msgid "Ask"
+msgstr "Chiedi"
+
+#: templates/index.html:40
+msgid "Answer"
+msgstr "Risposta"
+
+#: templates/index.html:45
+msgid "Was this answer helpful?"
+msgstr "Questa risposta è stata utile?"
+
+#: templates/index.html:47
+msgid "👍 Yes"
+msgstr "👍 Sì"
+
+#: templates/index.html:48
+msgid "👎 No"
+msgstr "👎 No"
+
+#: templates/index.html:50
+msgid "Thank you for your feedback!"
+msgstr "Grazie per il tuo feedback!"
+
+#: templates/index.html:54
+msgid "Sources"
+msgstr "Fonti"
+
+#: templates/index.html:63
+msgid "Thinking..."
+msgstr "Sto pensando..."
+
+#: templates/index.html:65
+msgid "An error occurred. Please try again."
+msgstr "Si è verificato un errore. Per favore, riprova."
+
+#: templates/index.html:66
+msgid "No sources were retrieved for this answer."
+msgstr "Nessuna fonte è stata recuperata per questa risposta."
+
+#: templates/index.html:67
+msgid "Source"
+msgstr "Fonte"
+
+#: templates/index.html:68
+msgid "Metadata"
+msgstr "Metadati"
+
+#: templates/index.html:69
+msgid "Section"
+msgstr "Sezione"
+
+#: templates/index.html:70
+msgid "Page"
+msgstr "Pagina"
+
+#: templates/index.html:71
+msgid "Authors"
+msgstr "Autori"
+
+#: templates/index.html:72
+msgid "Year"
+msgstr "Anno"
