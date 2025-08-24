@@ -2,18 +2,20 @@ from flask import Flask, request, jsonify, render_template, g, make_response, re
 from flask_babel import Babel
 from flasgger import Swagger
 import uuid
-import rag  # rag.py
+
+from knowledge_base_assistant import db
+from knowledge_base_assistant import rag
+
 
 app = Flask(__name__)
 app.config['JSON_SORT_KEYS'] = False
 
+# Initialize Swagger for API docs
 # swagger = Swagger(app)
+
+# Setup Babel for i18n
 babel = Babel(app)
 
-# @app.route('/')
-# def home():
-#     """Redirect to the API documentation."""
-#     return redirect('/apidocs')
 
 # User's language
 def get_locale():
@@ -24,12 +26,15 @@ def get_locale():
     # 2. Browser's header
     return request.accept_languages.best_match(['en', 'es', 'it'])
 
+
 babel = Babel(app, locale_selector=get_locale)
+
 
 # Run before request to set language
 @app.before_request
 def before_request():
     g.locale = str(get_locale())
+
 
 @app.route('/set_language/<lang>')
 def set_language(lang):
@@ -37,8 +42,9 @@ def set_language(lang):
         return redirect(url_for('home'))
 
     response = make_response(redirect(request.referrer or url_for('home')))
-    response.set_cookie('lang', lang, max_age=30*24*60*60)
+    response.set_cookie('lang', lang, max_age=30 * 24 * 60 * 60)
     return response
+
 
 # Web page from root URL
 @app.route('/')
@@ -110,7 +116,7 @@ def ask_question():
     """
     data = request.get_json()
     question = data.get("question")
-    
+
     # User's language
     user_language = g.get('locale', 'en')
 
@@ -119,8 +125,10 @@ def ask_question():
 
     # Pass language to RAG
     answer, context = rag.answer_question(question, user_language=user_language)
-    
+
     conversation_id = str(uuid.uuid4())
+
+    db.save_conversation(conversation_id, question, answer, context)
 
     return jsonify({
         "question": question,
@@ -175,6 +183,8 @@ def submit_feedback():
     if not conversation_id or feedback not in [-1, 1]:
         return jsonify({"error": "Missing or invalid parameters"}), 400
 
+    db.save_feedback(conversation_id, feedback)
+
     return jsonify({
         "conversation_id": conversation_id,
         "feedback": feedback,
@@ -184,6 +194,7 @@ def submit_feedback():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
 

@@ -1,6 +1,6 @@
 import os
 import json
-import ingest
+from knowledge_base_assistant import ingest
 from openai import OpenAI
 
 # Initialize OpenAI client
@@ -37,10 +37,7 @@ def llm(prompt, model='gpt-4o-mini'):
             messages=[{"role": "user", "content": prompt}]
         )
         
-        content = response.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": prompt}]
-        )
+        content = response.choices[0].message.content
         
         # Handle None, empty strings, etc.
         if not content or not content.strip():
@@ -133,9 +130,11 @@ Based on the context, here is the synthesized answer in {user_language}:
 
         if is_metadata_query:
             print("--> Detected a metadata query. Retrieving metadata.")
-            PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+            PROJECT_ROOT = os.getenv('PROJECT_ROOT', os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
             data_path = os.path.join(PROJECT_ROOT, 'data', 'data.jsonl')
-            if not os.path.exists(data_path): return f"⚠️ Metadata file not found: {data_path}", []
+
+            if not os.path.exists(data_path):
+                return f"⚠️ Metadata file not found: {data_path}", []
             
             with open(data_path, 'rt', encoding='utf-8') as f_in: all_docs = [json.loads(line) for line in f_in]
             

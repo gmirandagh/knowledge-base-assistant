@@ -94,13 +94,6 @@ pipenv install --dev
 
 ## Running the application
 
-
-
-
-
-
-
-
 ### Database configuration
 
 Before the application starts for the first time, the database
@@ -112,12 +105,12 @@ First, run `postgres`:
 docker-compose up postgres
 ```
 
-Then run the [`db_prep.py`](fitness_assistant/db_prep.py) script:
+Then run the [`db_prep.py`](knowledge_base_assistant/db_prep.py) script:
 
 ```bash
 pipenv shell
 
-cd fitness_assistant
+cd knowledge_base_assistant
 
 export POSTGRES_HOST=localhost
 python db_prep.py
@@ -150,6 +143,10 @@ The easiest way to run the application is with `docker-compose`:
 docker-compose up
 ```
 
+Some quick references for Docker-compose commands to stop and resume in 
+
+
+
 ### Running locally
 
 If you want to run the application locally,
@@ -171,7 +168,7 @@ Now run the app on your host machine:
 ```bash
 pipenv shell
 
-cd fitness_assistant
+cd knowledge_base_assistant
 
 export POSTGRES_HOST=localhost
 python app.py
@@ -453,14 +450,14 @@ After submitting, you will receive an acknowledgment:
 
 ## Code
 
-The code for the application is in the [`fitness_assistant`](fitness_assistant/) folder:
+The code for the application is in the [`knowledge_base_assistant`](knowledge_base_assistant/) folder:
 
-- [`app.py`](fitness_assistant/app.py) - the Flask API, the main entrypoint to the application
-- [`rag.py`](fitness_assistant/rag.py) - the main RAG logic for building the retrieving the data and building the prompt
-- [`ingest.py`](fitness_assistant/ingest.py) - loading the data into the knowledge base
-- [`minsearch.py`](fitness_assistant/minsearch.py) - an in-memory search engine
-- [`db.py`](fitness_assistant/db.py) - the logic for logging the requests and responses to postgres
-- [`db_prep.py`](fitness_assistant/db_prep.py) - the script for initializing the database
+- [`app.py`](knowledge_base_assistant/app.py) - the Flask API, the main entrypoint to the application
+- [`rag.py`](knowledge_base_assistant/rag.py) - the main RAG logic for building the retrieving the data and building the prompt
+- [`ingest.py`](knowledge_base_assistant/ingest.py) - loading the data into the knowledge base
+- [`minsearch.py`](knowledge_base_assistant/minsearch.py) - an in-memory search engine
+- [`db.py`](knowledge_base_assistant/db.py) - the logic for logging the requests and responses to postgres
+- [`db_prep.py`](knowledge_base_assistant/db_prep.py) - the script for initializing the database
 
 We also have some code in the project root directory:
 
@@ -593,6 +590,18 @@ be created  for asking questions and use web clients
 In this case, questions can be sent to `http://localhost:5000/question`.
 
 For more information, visit the [official Flask documentation](https://flask.palletsprojects.com/).
+
+
+### Docker-compose quick reference
+
+A few useful commands to stop and resume the docker server (and dependencies):
+- *Stop everything*: docker-compose down
+- *Start everything in background*: docker-compose up -d
+- *View status*: docker-compose ps
+- *View logs*: docker-compose logs -f app
+
+# Stop + remove volumes (⚠️ deletes all data!)
+docker-compose down -v
 
 
 ## Acknowledgements 

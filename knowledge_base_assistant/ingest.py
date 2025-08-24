@@ -3,8 +3,7 @@ import minsearch
 import json
 import pickle
 
-# Define paths relative to this script's location
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+PROJECT_ROOT = os.getenv('PROJECT_ROOT', os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 data_path = os.path.join(PROJECT_ROOT, 'data', 'data.jsonl')
 data_index_path = os.path.join(PROJECT_ROOT, 'data', 'data_index.bin')
 

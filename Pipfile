@@ -11,6 +11,8 @@ flask = "*"
 minsearch = "*"
 flasgger = "*"
 flask-babel = "*"
+psycopg2-binary = "*"
+gunicorn = "*"
 
 [dev-packages]
 tqdm = "*"
