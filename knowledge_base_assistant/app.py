@@ -35,7 +35,7 @@ def set_language(lang):
         return redirect(url_for('home'))
 
     response = make_response(redirect(request.referrer or url_for('home')))
-    response.set_cookie('lang', lang, max_age=30*24*60*60) # Cookie lasts 30 days
+    response.set_cookie('lang', lang, max_age=30*24*60*60)
     return response
 
 # Web page from the root URL
