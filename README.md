@@ -474,6 +474,10 @@ Flask is used for serving the application as an API.
 Refer to the ["Using the Application" section](#using-the-application)
 for examples on how to interact with the application.
 
+
+<!-- TO BE UPDATED -->
+
+
 ### Ingestion
 
 The ingestion script is in [`ingest.py`](knowledge_base_assistant/ingest.py).
@@ -577,17 +581,16 @@ When prompted, keep "admin" as the new password.
 
 ## Background
 
-Here we provide background on some tech not used in the
-course and links for further reading.
+This section is to provide background on some tech not used in the Master and links for further reading.
 
 ### Flask
 
-We use Flask for creating the API interface for our application.
-It's a web application framework for Python: we can easily
-create an endpoint for asking questions and use web clients
+Flask is used for creating the API interface for the application.
+It's a web application framework for Python: an endpoint can easily 
+be created  for asking questions and use web clients
 (like `curl` or `requests`) for communicating with it.
 
-In our case, we can send questions to `http://localhost:5000/question`.
+In this case, questions can be sent to `http://localhost:5000/question`.
 
 For more information, visit the [official Flask documentation](https://flask.palletsprojects.com/).
 

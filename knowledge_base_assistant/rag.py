@@ -24,31 +24,39 @@ def search(query, filter_dict=None):
     return results
 
 
+# In rag.py
+
 def llm(prompt, model='gpt-4o-mini'):
-    """Wrapper for OpenAI LLM calls with robust error and None handling."""
+    """
+    A robust wrapper for OpenAI LLM calls that includes comprehensive error
+    handling, content validation, and debugging output.
+    """
     try:
         response = client.chat.completions.create(
             model=model,
             messages=[{"role": "user", "content": prompt}]
         )
         
-        content = response.choices[0].message.content
+        content = response.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}]
+        )
         
-        # Check content
-        if content is None or not content.strip():
-            return "The model did not provide a valid response."
+        # Handle None, empty strings, etc.
+        if not content or not content.strip():
+            print("⚠️ LLM returned empty or whitespace-only content.")
+            return "The model did not provide a valid textual response."
             
-        return content
+        return content.strip()
 
     except Exception as e:
-        return f"⚠️ LLM call failed: {e}"
-
+        print(f"⚠️ LLM call failed with exception: {e}")
+        return "⚠️ An error occurred while communicating with the language model."
 
 
 def answer_question(question, user_language='en', model='gpt-4o-mini'):
     """
-    Advanced, hybrid RAG function that handles multiple languages robustly
-    and returns a clean, curated API context.
+    Advanced RAG with a "Search-Then-Decide" router to improve robustness.
     """
     # Step 1: Translate to English
     if user_language != 'en':
@@ -59,42 +67,89 @@ def answer_question(question, user_language='en', model='gpt-4o-mini'):
     else:
         english_query = question
 
-    # Step 2: Check metadata
-    metadata_keywords = ['author', 'authors', 'year', 'published', 'title', 'document id']
-    is_metadata_query = any(keyword in english_query.lower() for keyword in metadata_keywords)
+    # Step 2: Content search first
+    print("--> Performing content search...")
+    search_results = search(english_query)
     
-    api_context = []
-    answer = "No information found."
+    context_for_llm = ""
+    if search_results:
+        context_parts = [f"Source: {doc.get('title')}\nContent: {doc.get('text')}" for doc in search_results]
+        context_for_llm = "\n\n---\n\n".join(context_parts)
+    
+    # Step 3: Check relevance
+    print("--> Asking Router LLM to check context relevance...")
+    router_prompt = f"""
+You are a relevance checking model. Your task is to determine if the provided CONTEXT contains enough information to answer the USER'S QUESTION.
+Respond with only the single word YES or NO.
 
-    if is_metadata_query:
-        print("--> Detected a metadata query. Retrieving metadata.")
-        PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-        data_path = os.path.join(PROJECT_ROOT, 'data', 'data.jsonl')
+USER'S QUESTION: {english_query}
 
-        if not os.path.exists(data_path):
-            return f"⚠️ Metadata file not found: {data_path}", []
+CONTEXT:
+---
+{context_for_llm or "No context was found."}
+---
 
-        with open(data_path, 'rt', encoding='utf-8') as f_in:
-            all_docs = [json.loads(line) for line in f_in]
+Is the context relevant to the question? Respond with only YES or NO.
+""".strip()
 
-        papers_metadata = {}
-        for doc in all_docs:
-            meta = doc.get('document_metadata', {})
-            title = meta.get('title')
-            if title and title not in papers_metadata:
-                papers_metadata[title] = meta
-                api_context.append({
-                    "type": "metadata",
-                    "title": meta.get("title", "N/A"),
-                    "authors": meta.get("authors", []),
-                    "year": meta.get("year", "N/A")
-                })
+    router_decision = llm(router_prompt, model='gpt-4o-mini')
+    print(f"--> Router decision: {router_decision}")
 
-        context_for_llm = json.dumps(list(papers_metadata.values()), indent=2)
+    # Step 4: Act on router's decision
+    if "YES" in router_decision.upper():
+        print("--> Router found relevant context. Synthesizing answer...")
+        # If relevant, proceed with synthesis
+        api_context = []
+        for doc in search_results:
+            api_context.append({
+                "type": "content", "title": doc.get("title", "N/A"),
+                "section_title": doc.get("section_title", "N/A"),
+                "page_number": doc.get("page_number", "N/A"),
+                "content": doc.get("text", "")
+            })
+
+        synthesis_prompt = f"""
+You are an expert assistant. Your task is to synthesize a clear and concise answer to the user's question based *only* on the provided CONTEXT.
+Formulate your final answer in {user_language}.
+
+USER'S QUESTION (Original): {question}
+
+CONTEXT:
+---
+{context_for_llm}
+---
+
+Based on the context, here is the synthesized answer in {user_language}:
+""".strip()
         
-        final_prompt = f"""
-You are a research assistant. Your task is to answer the user's question based *only* on the provided structured METADATA.
-Perform any necessary analysis, such as counting or listing, to answer accurately.
+        answer = llm(synthesis_prompt, model=model)
+        return answer, api_context
+
+    else:
+        # If NOT relevant, check metadata query
+        print("--> Router found context irrelevant. Checking for metadata query as fallback...")
+        metadata_keywords = ['author', 'authors', 'year', 'published', 'title', 'document id']
+        is_metadata_query = any(keyword in english_query.lower() for keyword in metadata_keywords)
+
+        if is_metadata_query:
+            print("--> Detected a metadata query. Retrieving metadata.")
+            PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+            data_path = os.path.join(PROJECT_ROOT, 'data', 'data.jsonl')
+            if not os.path.exists(data_path): return f"⚠️ Metadata file not found: {data_path}", []
+            
+            with open(data_path, 'rt', encoding='utf-8') as f_in: all_docs = [json.loads(line) for line in f_in]
+            
+            api_context, papers_metadata = [], {}
+            for doc in all_docs:
+                meta = doc.get('document_metadata', {})
+                title = meta.get('title')
+                if title and title not in papers_metadata:
+                    papers_metadata[title] = meta
+                    api_context.append({"type": "metadata", "title": meta.get("title"), "authors": meta.get("authors"), "year": meta.get("year")})
+            
+            context_for_llm = json.dumps(list(papers_metadata.values()), indent=2)
+            metadata_prompt = f"""
+You are a research assistant. Answer the user's question based *only* on the provided METADATA.
 Formulate your final answer in {user_language}.
 
 USER'S QUESTION (Original): {question}
@@ -106,49 +161,18 @@ METADATA:
 
 Based on the metadata, here is the answer in {user_language}:
 """.strip()
-        answer = llm(final_prompt, model=model)
+            answer = llm(metadata_prompt, model=model)
+            return answer, api_context
 
-    else:
-        print("--> Performing standard content search.")
-        search_results = search(english_query)
-        if not search_results:
-            return "Could not find relevant information.", []
-
-        context_for_llm_parts = []
-        for doc in search_results:
-            api_context.append({
-                "type": "content",
-                "title": doc.get("title", "N/A"),
-                "section_title": doc.get("section_title", "N/A"),
-                "page_number": doc.get("page_number", "N/A"),
-                "content": doc.get("text", "")
-            })
-            context_for_llm_parts.append(f"Source: {doc.get('title')}\nContent: {doc.get('text')}")
-        
-        context_for_llm = "\n\n---\n\n".join(context_for_llm_parts)
-        
-        final_prompt = f"""
-You are an expert assistant. Your task is to synthesize a clear and concise answer to the user's question based *only* on the provided CONTEXT. Do not use any outside knowledge.
-
-Follow these steps:
-1. Carefully read the USER'S QUESTION to understand what they are asking for.
-2. Read through all the CONTEXT provided.
-3. Identify the key pieces of information in the CONTEXT that directly answer the USER'S QUESTION.
-4. Synthesize these pieces of information into a single, coherent answer.
-5. Formulate your final answer in {user_language}.
-
-USER'S QUESTION (Original): {question}
-
-CONTEXT:
----
-{context_for_llm}
----
-
-Based on the context, here is the synthesized answer in {user_language}:
-""".strip()
-        answer = llm(final_prompt, model=model)
-
-    return answer, api_context
+        else:
+            # Irrelevant AND not metadata
+            print("--> Not a metadata query. Returning graceful failure message.")
+            failure_messages = {
+                'en': "I could not find a specific answer for your question in the provided documents. Please try rephrasing your query.",
+                'es': "No pude encontrar una respuesta específica para tu pregunta en los documentos proporcionados. Por favor, intenta reformular tu consulta.",
+                'it': "Non sono riuscito a trovare una risposta specifica alla tua domanda nei documenti forniti. Prova a riformulare la tua domanda."
+            }
+            return failure_messages.get(user_language, failure_messages['en']), []
 
 
 # # Simple CLI in English
