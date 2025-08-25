@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, render_template, g, make_response, re
 from flask_babel import Babel
 from flasgger import Swagger
 import uuid
+import os
 
 from knowledge_base_assistant import db
 from knowledge_base_assistant import rag
@@ -15,6 +16,9 @@ app.config['JSON_SORT_KEYS'] = False
 
 # Setup Babel for i18n
 babel = Babel(app)
+
+# Configuration for monitoring features
+ENABLE_MONITORING = os.getenv('ENABLE_MONITORING', '1') == '1'
 
 
 # User's language
@@ -55,7 +59,7 @@ def home():
 
 # API Endpoints
 
-# 1. Ask question
+# 1. Ask question (Enhanced with monitoring)
 @app.route('/ask', methods=['POST'])
 def ask_question():
     """
@@ -73,6 +77,10 @@ def ask_question():
             question:
               type: string
               example: "Who are the authors of Document X?"
+            enable_monitoring:
+              type: boolean
+              example: false
+              description: "Optional: Enable detailed monitoring for this request"
     responses:
       200:
         description: Answer with conversation ID and context
@@ -113,9 +121,47 @@ def ask_question():
                   year:
                     type: string
                     example: "2023"
+            metrics:
+              type: object
+              description: "Optional: Detailed metrics (only if monitoring enabled)"
+              properties:
+                processing_time_seconds:
+                  type: number
+                  example: 2.34
+                total_cost_usd:
+                  type: number
+                  example: 0.002156
+                total_tokens:
+                  type: object
+                  properties:
+                    prompt_tokens:
+                      type: integer
+                      example: 150
+                    completion_tokens:
+                      type: integer
+                      example: 75
+                    total_tokens:
+                      type: integer
+                      example: 225
+                relevance_evaluation:
+                  type: object
+                  properties:
+                    Relevance:
+                      type: string
+                      example: "RELEVANT"
+                    Explanation:
+                      type: string
+                      example: "The answer directly addresses the user's question"
+                model_used:
+                  type: string
+                  example: "gpt-4o-mini"
+                search_results_count:
+                  type: integer
+                  example: 5
     """
     data = request.get_json()
     question = data.get("question")
+    enable_request_monitoring = data.get("enable_monitoring", False)
 
     # User's language
     user_language = g.get('locale', 'en')
@@ -123,19 +169,51 @@ def ask_question():
     if not question:
         return jsonify({"error": "Missing 'question'"}), 400
 
-    # Pass language to RAG
-    answer, context = rag.answer_question(question, user_language=user_language)
+    # Determine if monitoring should be enabled for this request
+    use_monitoring = ENABLE_MONITORING or enable_request_monitoring
 
-    conversation_id = str(uuid.uuid4())
+    try:
+        if use_monitoring:
+            # Enhanced RAG with monitoring
+            answer, context, metrics = rag.answer_question(
+                question, 
+                user_language=user_language, 
+                evaluate=True
+            )
+        else:
+            # Standard RAG (backward compatible)
+            answer, context = rag.answer_question(question, user_language=user_language)
+            metrics = None
 
-    db.save_conversation(conversation_id, question, answer, context)
+        conversation_id = str(uuid.uuid4())
 
-    return jsonify({
-        "question": question,
-        "answer": answer,
-        "context": context,
-        "conversation_id": conversation_id
-    })
+        # Save conversation with optional metrics
+        db.save_conversation(
+            conversation_id, 
+            question, 
+            answer, 
+            context, 
+            metrics=metrics, 
+            user_language=user_language
+        )
+
+        # Prepare response
+        response_data = {
+            "question": question,
+            "answer": answer,
+            "context": context,
+            "conversation_id": conversation_id
+        }
+
+        # Add metrics to response if monitoring was enabled
+        if use_monitoring and metrics:
+            response_data["metrics"] = metrics
+
+        return jsonify(response_data)
+
+    except Exception as e:
+        app.logger.error(f"Error processing question: {str(e)}")
+        return jsonify({"error": "An error occurred while processing your question"}), 500
 
 
 # 2. Submit feedback
@@ -183,32 +261,271 @@ def submit_feedback():
     if not conversation_id or feedback not in [-1, 1]:
         return jsonify({"error": "Missing or invalid parameters"}), 400
 
-    db.save_feedback(conversation_id, feedback)
+    try:
+        db.save_feedback(conversation_id, feedback)
 
-    return jsonify({
-        "conversation_id": conversation_id,
-        "feedback": feedback,
-        "status": "feedback received"
-    })
+        return jsonify({
+            "conversation_id": conversation_id,
+            "feedback": feedback,
+            "status": "feedback received"
+        })
+    except Exception as e:
+        app.logger.error(f"Error saving feedback: {str(e)}")
+        return jsonify({"error": "An error occurred while saving feedback"}), 500
+
+
+# 3. Get conversation history (New monitoring endpoint)
+@app.route('/conversations', methods=['GET'])
+def get_conversations():
+    """
+    Get recent conversations with optional filtering
+    ---
+    tags:
+      - Monitoring
+    parameters:
+      - name: limit
+        in: query
+        type: integer
+        default: 10
+        description: Maximum number of conversations to return
+      - name: relevance
+        in: query
+        type: string
+        enum: [RELEVANT, PARTLY_RELEVANT, NON_RELEVANT]
+        description: Filter by relevance level
+      - name: language
+        in: query
+        type: string
+        enum: [en, es, it]
+        description: Filter by user language
+    responses:
+      200:
+        description: List of recent conversations
+        schema:
+          type: object
+          properties:
+            conversations:
+              type: array
+              items:
+                type: object
+            count:
+              type: integer
+    """
+    limit = min(int(request.args.get('limit', 10)), 100)  # Cap at 100
+    relevance = request.args.get('relevance')
+    language = request.args.get('language')
+
+    try:
+        conversations = db.get_recent_conversations(
+            limit=limit,
+            relevance=relevance,
+            user_language=language
+        )
+        
+        # Convert to dict for JSON serialization
+        conversations_list = [dict(conv) for conv in conversations]
+        
+        return jsonify({
+            "conversations": conversations_list,
+            "count": len(conversations_list)
+        })
+    except Exception as e:
+        app.logger.error(f"Error fetching conversations: {str(e)}")
+        return jsonify({"error": "An error occurred while fetching conversations"}), 500
+
+
+# 4. Get feedback statistics (New monitoring endpoint)
+@app.route('/stats/feedback', methods=['GET'])
+def get_feedback_statistics():
+    """
+    Get feedback statistics
+    ---
+    tags:
+      - Monitoring
+    responses:
+      200:
+        description: Feedback statistics
+        schema:
+          type: object
+          properties:
+            thumbs_up:
+              type: integer
+              example: 25
+            thumbs_down:
+              type: integer
+              example: 3
+            total_feedback:
+              type: integer
+              example: 28
+            positive_ratio:
+              type: number
+              example: 0.89
+    """
+    try:
+        stats = db.get_feedback_stats()
+        total = stats['thumbs_up'] + stats['thumbs_down']
+        positive_ratio = stats['thumbs_up'] / total if total > 0 else 0
+
+        return jsonify({
+            "thumbs_up": stats['thumbs_up'],
+            "thumbs_down": stats['thumbs_down'],
+            "total_feedback": total,
+            "positive_ratio": round(positive_ratio, 2)
+        })
+    except Exception as e:
+        app.logger.error(f"Error fetching feedback stats: {str(e)}")
+        return jsonify({"error": "An error occurred while fetching statistics"}), 500
+
+
+# 5. Get conversation analytics (New monitoring endpoint)
+@app.route('/stats/conversations', methods=['GET'])
+def get_conversation_statistics():
+    """
+    Get conversation analytics
+    ---
+    tags:
+      - Monitoring
+    parameters:
+      - name: days
+        in: query
+        type: integer
+        default: 7
+        description: Number of days to include in statistics
+    responses:
+      200:
+        description: Conversation analytics
+        schema:
+          type: object
+          properties:
+            total_conversations:
+              type: integer
+              example: 150
+            avg_response_time:
+              type: number
+              example: 2.34
+            total_cost:
+              type: number
+              example: 0.125
+            avg_cost_per_conversation:
+              type: number
+              example: 0.00083
+            total_tokens_used:
+              type: integer
+              example: 45000
+            relevance_distribution:
+              type: object
+              properties:
+                relevant:
+                  type: integer
+                  example: 120
+                partly_relevant:
+                  type: integer
+                  example: 25
+                non_relevant:
+                  type: integer
+                  example: 5
+            language_distribution:
+              type: array
+              items:
+                type: object
+                properties:
+                  user_language:
+                    type: string
+                    example: "en"
+                  count:
+                    type: integer
+                    example: 100
+    """
+    days = int(request.args.get('days', 7))
+    
+    try:
+        stats = db.get_conversation_stats(days=days)
+        
+        return jsonify({
+            "period_days": days,
+            **stats
+        })
+    except Exception as e:
+        app.logger.error(f"Error fetching conversation stats: {str(e)}")
+        return jsonify({"error": "An error occurred while fetching analytics"}), 500
+
+
+# 6. Get specific conversation (New monitoring endpoint)
+@app.route('/conversations/<conversation_id>', methods=['GET'])
+def get_conversation(conversation_id):
+    """
+    Get a specific conversation by ID
+    ---
+    tags:
+      - Monitoring
+    parameters:
+      - name: conversation_id
+        in: path
+        type: string
+        required: true
+        description: The conversation ID
+    responses:
+      200:
+        description: Conversation details
+        schema:
+          type: object
+      404:
+        description: Conversation not found
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              example: "Conversation not found"
+    """
+    try:
+        conversation = db.get_conversation_by_id(conversation_id)
+        
+        if not conversation:
+            return jsonify({"error": "Conversation not found"}), 404
+        
+        return jsonify(dict(conversation))
+    except Exception as e:
+        app.logger.error(f"Error fetching conversation {conversation_id}: {str(e)}")
+        return jsonify({"error": "An error occurred while fetching the conversation"}), 500
+
+
+# Health check endpoint
+@app.route('/health', methods=['GET'])
+def health_check():
+    """
+    Health check endpoint
+    ---
+    tags:
+      - System
+    responses:
+      200:
+        description: Service is healthy
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: "healthy"
+            monitoring_enabled:
+              type: boolean
+              example: true
+    """
+    try:
+        # Test database connection
+        db.get_db_connection().close()
+        
+        return jsonify({
+            "status": "healthy",
+            "monitoring_enabled": ENABLE_MONITORING
+        })
+    except Exception as e:
+        app.logger.error(f"Health check failed: {str(e)}")
+        return jsonify({
+            "status": "unhealthy",
+            "error": str(e)
+        }), 500
 
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-
-
-
-
-# How to test
-# Install dependencies if you haven’t already:
-# pip install flask flasgger
-
-# Run the Flask app:
-# python app.py
-
-# Open Swagger UI in your browser:
-# http://127.0.0.1:5000/apidocs
-
-# You’ll see interactive forms for:
-# /ask → enter a question, get answer + conversation_id.
-# /feedback → enter conversation_id and feedback (+1 or -1).

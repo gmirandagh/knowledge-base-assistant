@@ -23,8 +23,13 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       PYTHONPATH: /app
       PROJECT_ROOT: /app
+      # Monitoring Configuration
+      ENABLE_MONITORING: ${ENABLE_MONITORING:-1}
+      AUTO_MIGRATE: ${AUTO_MIGRATE:-1}
+      RUN_TIMEZONE_CHECK: ${RUN_TIMEZONE_CHECK:-1}
+      TZ: ${TZ:-Europe/Berlin}
     ports:
-      - "${APP_PORT:-8000}:5000"
+      - "${APP_PORT:-8000}:8000"
     depends_on:
       - postgres
     restart: always

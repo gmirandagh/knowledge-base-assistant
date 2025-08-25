@@ -76,9 +76,21 @@ You can find the data stored in JSONL format in [`data/data.jsonl`](data/data.js
 Since we use OpenAI, you need to provide the API key:
 
 1. Install `direnv`. If you use Ubuntu, run `sudo apt install direnv` and then `direnv hook bash >> ~/.bashrc`.
+    ```bash
+    sudo apt-get update && sudo apt-get install direnv -y
+    
+    direnv hook bash >> ~/.bashrc
+    ```
+
 2. Copy `.envrc_template` into `.envrc` and insert your key there.
+
 3. For OpenAI, it's recommended to create a new project and use a separate key.
+    Modify [.env](.env) replacing 'YOUR_KEY' by your actual generated API key.
+
 4. Run `direnv allow` to load the key into your environment.
+    ```bash
+    direnv allow
+    ```
 
 For dependency management, we use pipenv, so you need to install it:
 
@@ -113,6 +125,7 @@ pipenv shell
 cd knowledge_base_assistant
 
 export POSTGRES_HOST=localhost
+
 python db_prep.py
 ```
 
@@ -143,8 +156,7 @@ The easiest way to run the application is with `docker-compose`:
 docker-compose up
 ```
 
-Some quick references for Docker-compose commands to stop and resume in 
-
+Some quick references for Docker-compose commands to stop and resume in [Background](#background)
 
 
 ### Running locally

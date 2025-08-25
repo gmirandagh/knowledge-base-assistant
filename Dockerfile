@@ -12,6 +12,6 @@ RUN pipenv install --deploy --ignore-pipfile --system
 COPY data/ ./data/
 COPY knowledge_base_assistant ./knowledge_base_assistant
 
-EXPOSE 5000
+EXPOSE 8000
 
-CMD gunicorn --bind 0.0.0.0:5000 knowledge_base_assistant.app:app
+CMD gunicorn --bind 0.0.0.0:8000 knowledge_base_assistant.app:app
