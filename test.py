@@ -17,7 +17,7 @@ question = df.sample(n=1).iloc[0]['question']
 print(f"Testing with question: \"{question}\"")
 print("-" * 30)
 
-url = "http://localhost:5000/ask"
+url = "http://localhost:8000/ask"
 
 data = {"question": question}
 
