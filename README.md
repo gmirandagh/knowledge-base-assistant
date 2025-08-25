@@ -185,19 +185,17 @@ as in the previous section.
 Next, build the image:
 
 ```bash
-docker build -t fitness-assistant .
+docker build -t knowledge-base-assistant .
 ```
 
 And run it:
 
 ```bash
 docker run -it --rm \
-    --network="fitness-assistant_default" \
+    --network="knowledge-base-assistant_default" \
     --env-file=".env" \
-    -e OPENAI_API_KEY=${OPENAI_API_KEY} \
-    -e DATA_PATH="data/data.csv" \
-    -p 5000:5000 \
-    fitness-assistant
+    -p 8000:5000 \
+    knowledge-base-assistant
 ```
 
 ### Time configuration
