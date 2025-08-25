@@ -3,13 +3,10 @@ import json
 from knowledge_base_assistant import ingest
 from openai import OpenAI
 
-# Initialize OpenAI client
 client = OpenAI()
 
-# Load or build index
 index = ingest.load_index()
 
-# --- Helper functions (no changes here) ---
 def search(query, filter_dict=None):
     """Performs a keyword search with optional filtering."""
     if filter_dict is None:
@@ -24,12 +21,10 @@ def search(query, filter_dict=None):
     return results
 
 
-# In rag.py
-
 def llm(prompt, model='gpt-4o-mini'):
     """
     A robust wrapper for OpenAI LLM calls that includes comprehensive error
-    handling, content validation, and debugging output.
+    handling, content validation, and graceful failure.
     """
     try:
         response = client.chat.completions.create(
@@ -39,10 +34,9 @@ def llm(prompt, model='gpt-4o-mini'):
         
         content = response.choices[0].message.content
         
-        # Handle None, empty strings, etc.
-        if not content or not content.strip():
-            print("⚠️ LLM returned empty or whitespace-only content.")
-            return "The model did not provide a valid textual response."
+        if not content or not content.strip() or content.strip().lower() == 'none':
+            print("⚠️ LLM returned invalid content. Failing gracefully.")
+            return "NO" 
             
         return content.strip()
 
@@ -120,6 +114,15 @@ Based on the context, here is the synthesized answer in {user_language}:
 """.strip()
         
         answer = llm(synthesis_prompt, model=model)
+
+        if answer == "NO":
+            print("--> Synthesis failed, returning graceful failure message.")
+            failure_messages = {
+                'en': "I was unable to synthesize a reliable answer from the provided documents. Please try rephrasing your question.",
+                'es': "No pude sintetizar una respuesta confiable a partir de los documentos proporcionados. Por favor, intenta reformular tu pregunta.",
+                'it': "Non sono stato in grado di sintetizzare una risposta affidabile dai documenti forniti. Prova a riformulare la tua domanda."
+            }
+            return failure_messages.get(user_language, failure_messages['en']), api_context
         return answer, api_context
 
     else:
