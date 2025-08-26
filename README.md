@@ -51,7 +51,6 @@ Watch a full video demo of the project, including setup and usage instructions:
   </a>
 </p>
 
--->
 
 ## Project Overview
 
