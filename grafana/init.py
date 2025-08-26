@@ -41,54 +41,89 @@ def wait_for_grafana(max_retries=30, delay=2):
     return False
 
 
+def get_existing_service_account(auth):
+    """Get existing service account by name."""
+    try:
+        sa_list_response = requests.get(f"{GRAFANA_URL}/api/serviceaccounts/search", auth=auth, timeout=10)
+        if sa_list_response.status_code == 200:
+            accounts = sa_list_response.json()["serviceAccounts"]
+            automation_account = next((acc for acc in accounts if acc["name"] == "automation"), None)
+            if automation_account:
+                return automation_account["id"]
+        return None
+    except requests.exceptions.RequestException as e:
+        print(f"Error getting existing service account: {e}")
+        return None
+
+
 def create_service_account_and_token():
     """Create service account and token using the new Grafana API."""
     auth = (GRAFANA_USER, GRAFANA_PASSWORD)
     headers = {"Content-Type": "application/json"}
     
     try:
-        # Step 1: Create service account
-        service_account_payload = {
-            "name": "automation",
-            "displayName": "Automation Service Account",
-            "role": "Admin"
-        }
+        # First, try to find existing service account
+        print("Checking for existing service account...")
+        sa_id = get_existing_service_account(auth)
         
-        print("Creating service account...")
-        sa_response = requests.post(
-            f"{GRAFANA_URL}/api/serviceaccounts", 
-            auth=auth, 
-            headers=headers, 
-            json=service_account_payload,
+        if sa_id:
+            print(f"Found existing service account (ID: {sa_id})")
+        else:
+            # Step 1: Create service account
+            service_account_payload = {
+                "name": "automation",
+                "displayName": "Automation Service Account",
+                "role": "Admin"
+            }
+            
+            print("Creating service account...")
+            sa_response = requests.post(
+                f"{GRAFANA_URL}/api/serviceaccounts", 
+                auth=auth, 
+                headers=headers, 
+                json=service_account_payload,
+                timeout=10
+            )
+            
+            if sa_response.status_code == 201:
+                service_account = sa_response.json()
+                sa_id = service_account["id"]
+                print(f"Service account created successfully (ID: {sa_id})")
+            elif sa_response.status_code in [400, 409]:
+                # Service account exists, try to get it
+                print("Service account already exists, trying to find it...")
+                sa_id = get_existing_service_account(auth)
+                if not sa_id:
+                    print("Could not find existing automation service account")
+                    return None
+            else:
+                print(f"Failed to create service account. Status: {sa_response.status_code}")
+                print(f"Response: {sa_response.text}")
+                return None
+
+        # Step 2: Check for existing tokens first
+        print("Checking for existing tokens...")
+        existing_tokens_response = requests.get(
+            f"{GRAFANA_URL}/api/serviceaccounts/{sa_id}/tokens",
+            auth=auth,
             timeout=10
         )
         
-        if sa_response.status_code == 201:
-            service_account = sa_response.json()
-            sa_id = service_account["id"]
-            print(f"Service account created successfully (ID: {sa_id})")
-        elif sa_response.status_code == 409:
-            # Service account already exists, get its ID
-            print("Service account already exists, finding existing one...")
-            sa_list_response = requests.get(f"{GRAFANA_URL}/api/serviceaccounts/search", auth=auth, timeout=10)
-            if sa_list_response.status_code == 200:
-                accounts = sa_list_response.json()["serviceAccounts"]
-                automation_account = next((acc for acc in accounts if acc["name"] == "automation"), None)
-                if automation_account:
-                    sa_id = automation_account["id"]
-                    print(f"Found existing service account (ID: {sa_id})")
-                else:
-                    print("Could not find automation service account")
-                    return None
-            else:
-                print(f"Failed to list service accounts: {sa_list_response.text}")
-                return None
-        else:
-            print(f"Failed to create service account. Status: {sa_response.status_code}")
-            print(f"Response: {sa_response.text}")
-            return None
+        if existing_tokens_response.status_code == 200:
+            existing_tokens = existing_tokens_response.json()
+            # Delete existing tokens to avoid conflicts
+            for token in existing_tokens:
+                if token["name"] == "automation-token":
+                    print(f"Deleting existing token: {token['id']}")
+                    delete_response = requests.delete(
+                        f"{GRAFANA_URL}/api/serviceaccounts/{sa_id}/tokens/{token['id']}",
+                        auth=auth,
+                        timeout=10
+                    )
+                    if delete_response.status_code != 200:
+                        print(f"Warning: Could not delete existing token {token['id']}")
 
-        # Step 2: Create token for the service account
+        # Step 3: Create new token for the service account
         token_payload = {
             "name": "automation-token"
         }
@@ -234,14 +269,59 @@ def create_dashboard(api_key, datasource_uid):
     update_datasource_in_object(dashboard_json)
     print(f"Updated datasource UID in {panels_updated} locations")
 
-    # Clean up dashboard JSON for import
-    dashboard_json.pop("id", None)
-    dashboard_json.pop("uid", None) 
-    dashboard_json.pop("version", None)
+    # Get the target UID from environment variable
+    target_dashboard_uid = os.getenv("GRAFANA_DASHBOARD_UID")
+    dashboard_title = dashboard_json.get("title", "Knowledge Base Assistant Dashboard")
     
-    # Ensure dashboard has required fields
-    if "title" not in dashboard_json:
-        dashboard_json["title"] = "Knowledge Base Assistant Dashboard"
+    # Check if dashboard exists by title or UID
+    existing_dashboard = None
+    try:
+        if target_dashboard_uid:
+            # Try to get dashboard by UID first
+            uid_response = requests.get(
+                f"{GRAFANA_URL}/api/dashboards/uid/{target_dashboard_uid}",
+                headers=headers,
+                timeout=10
+            )
+            if uid_response.status_code == 200:
+                existing_dashboard = uid_response.json()["dashboard"]
+                print(f"Found existing dashboard by UID: {target_dashboard_uid}")
+    except requests.exceptions.RequestException:
+        pass
+    
+    if not existing_dashboard:
+        # Try to find by title
+        try:
+            search_response = requests.get(
+                f"{GRAFANA_URL}/api/search?query={dashboard_title}",
+                headers=headers,
+                timeout=10
+            )
+            if search_response.status_code == 200:
+                dashboards = search_response.json()
+                for dash in dashboards:
+                    if dash["title"] == dashboard_title:
+                        existing_dashboard = dash
+                        target_dashboard_uid = dash["uid"]
+                        print(f"Found existing dashboard by title: {dashboard_title}")
+                        break
+        except requests.exceptions.RequestException:
+            pass
+
+    # Set up the dashboard with proper UID handling
+    if existing_dashboard:
+        # Update existing dashboard - preserve UID
+        dashboard_json["uid"] = target_dashboard_uid
+        dashboard_json["id"] = existing_dashboard.get("id")
+        dashboard_json["version"] = existing_dashboard.get("version", 0) + 1
+        print(f"Updating existing dashboard (UID: {target_dashboard_uid})")
+    else:
+        # Create new dashboard with specific UID if provided
+        if target_dashboard_uid:
+            dashboard_json["uid"] = target_dashboard_uid
+        dashboard_json.pop("id", None)
+        dashboard_json.pop("version", None)
+        print("Creating new dashboard")
 
     dashboard_payload = {
         "dashboard": dashboard_json,
@@ -250,7 +330,6 @@ def create_dashboard(api_key, datasource_uid):
     }
 
     try:
-        print("Creating dashboard...")
         response = requests.post(
             f"{GRAFANA_URL}/api/dashboards/db", 
             headers=headers, 
@@ -260,11 +339,18 @@ def create_dashboard(api_key, datasource_uid):
 
         if response.status_code == 200:
             result = response.json()
-            print(f"Dashboard created successfully!")
-            print(f"Dashboard URL: {GRAFANA_URL}/d/{result.get('uid')}")
-            return result.get("uid")
+            dashboard_uid = result.get("uid")
+            print(f"Dashboard {'updated' if existing_dashboard else 'created'} successfully!")
+            print(f"Dashboard URL: {GRAFANA_URL}/d/{dashboard_uid}")
+            
+            # Update environment variable if needed
+            if target_dashboard_uid != dashboard_uid:
+                print(f"Note: Dashboard UID is {dashboard_uid}")
+                print(f"You may want to update GRAFANA_DASHBOARD_UID in your .env file")
+            
+            return dashboard_uid
         else:
-            print(f"Failed to create dashboard. Status: {response.status_code}")
+            print(f"Failed to create/update dashboard. Status: {response.status_code}")
             print(f"Response: {response.text}")
             return None
             

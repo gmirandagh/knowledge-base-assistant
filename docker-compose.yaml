@@ -10,35 +10,26 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  app:
+  db-prep:
     build:
       context: .
       dockerfile: Dockerfile
+    command: python -m knowledge_base_assistant.db_prep
+    env_file:
+      - ./.env
     environment:
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      POSTGRES_HOST: postgres
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       PYTHONPATH: /app
-      PROJECT_ROOT: /app
-      ENABLE_MONITORING: ${ENABLE_MONITORING:-1}
-      AUTO_MIGRATE: ${AUTO_MIGRATE:-1}
-      RUN_TIMEZONE_CHECK: ${RUN_TIMEZONE_CHECK:-1}
-      TZ: ${TZ:-Europe/Berlin}
-      GRAFANA_ADMIN_USER: ${GRAFANA_ADMIN_USER}
-      GRAFANA_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
-      GRAFANA_BASE_URL: http://localhost:3000
-      GRAFANA_DASHBOARD_UID: ${GRAFANA_DASHBOARD_UID}
-    ports:
-      - "${APP_PORT:-8000}:8000"
-    volumes:
-      - .:/app   
+      POSTGRES_HOST: postgres
     depends_on:
-      - postgres
-      - grafana
-    restart: always
+      postgres:
+        condition: service_healthy
+    restart: "no"
 
   grafana:
     image: grafana/grafana:latest
@@ -46,6 +37,7 @@ services:
       - "3000:3000"
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
@@ -53,8 +45,14 @@ services:
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   grafana-init:
     build:
@@ -76,6 +74,29 @@ services:
       - grafana
       - postgres
     restart: "no"
+
+  app:
+    image: ${COMPOSE_PROJECT_NAME}-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - ./.env
+    environment:
+      POSTGRES_HOST: postgres
+      PYTHONPATH: /app
+      GRAFANA_BASE_URL: http://localhost:3000
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    volumes:
+      - .:/app
+    depends_on:
+      db-prep:
+        condition: service_completed_successfully
+      grafana-init:
+        condition: service_completed_successfully
+    restart: always
+
 
 volumes:
   postgres_data:

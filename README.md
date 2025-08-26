@@ -1,31 +1,71 @@
-# Knowledge-base Assistant
+# Knowledge Base Assistant
 
-A RAG application for building a high-fidelity Q&A assistant grounded in your enterprise internal knowledge base.
-
-<p align="center">
-  <img src="images/readme_kba-banner.png">
-</p>
-
-Navigating dense and lengthy technical documents is a significant challenge for engineers, researchers, and subject matter experts. Finding specific information can be time-consuming, and key knowledge is often siloed within complex PDFs.
-
-The Knowledge Base Assistant provides a conversational AI that ingests these technical documents and allows users to ask questions in natural language, making complex information accessible and actionable.
-
-This project was implemented for 
-[(Online) Máster Data Science, Big Data & Business Analytics 2024-2025 (clase 4)]() -
-TFM.
+A Retrieval-Augmented Generation (RAG) application that transforms your internal technical documents into an interactive and intelligent Q&A system.
 
 <p align="center">
-  <img src="images/image.png">
+  <img src="images/readme_kba-banner.png" alt="Knowledge Base Assistant Banner">
 </p>
 
-To see a demo of the project and instructions on how to run it, check this video:
+## The Problem
 
+Engineers, researchers, and subject matter experts often face the challenge of navigating dense and lengthy technical documents. Finding specific information is time-consuming, and critical knowledge remains siloed within complex PDFs, hindering productivity and knowledge sharing.
+
+## The Solution
+
+The Knowledge Base Assistant provides a powerful conversational AI that ingests these documents and allows users to ask questions in natural language. It makes complex information instantly accessible and actionable, turning your static knowledge base into a dynamic conversation partner.
+
+This project was developed as a Final Master's Thesis for the *Master in Data Science, Big Data & Business Analytics* (UCM-ntic, 2024-2025).
+
+## Key Features
+
+✨ **Interactive Web UI:** A clean, modern web interface for asking questions and receiving answers, complete with an integrated real-time monitoring dashboard.
+<br>
+📊 **Embedded Grafana Dashboard:** Live, interactive visualizations of system performance, cost, and user feedback are embedded directly into the web UI.
+<br>
+🤖 **Interactive CLI:** A powerful command-line interface (`cli.py`) for interacting with the assistant, submitting feedback, and viewing system health metrics directly in your terminal.
+<br>
+🌐 **Multi-Language Support:** The RAG pipeline is capable of handling queries and generating answers in multiple languages (English, Spanish, and Italian supported).
+<br>
+📈 **Comprehensive Monitoring:** Detailed logging of conversations, feedback, and performance metrics to a PostgreSQL database, visualized in Grafana.
+<br>
+🐳 **Containerized with Docker:** The entire application stack is containerized for easy, one-command setup and consistent deployment.
+
+## Live Demo & Screenshots
+
+Below is a screenshot of the main web interface, showing the chat application alongside the embedded, real-time Grafana monitoring dashboard.
+
+<p align="center">
+  <img src="images/image.png" alt="Web UI with Embedded Grafana Dashboard">
+</p>
+
+Watch a full video demo of the project, including setup and usage instructions:
 
 <p align="center">
   <a href="https://www.youtube.com/watch?v=RiQcSHzR8_E">
-    <img src="https://markdown-videos-api.jorgenkh.no/youtube/RiQcSHzR8_E">
+    <img src="https://markdown-videos-api.jorgenkh.no/youtube/RiQcSHzR8_E" alt="Video Demo">
   </a>
 </p>
+
+---
+
+### **Action Items & Questions for You:**
+
+2.  **Update Screenshot:** The current `image.png` might not show the final UI with the embedded dashboard. **Could you please take a new screenshot of the full web page** (chat on top, dashboard below) and replace the existing `images/image.png`? This will be a huge visual upgrade.
+3.  **Confirm Master's Program Name:** I kept the name you had. Is `(Online) Máster Data Science, Big Data & Business Analytics 2024-2025 (clase 4)]()` the full, correct title? I've updated it slightly for clarity.
+
+Once you confirm you're happy with this section and have updated the screenshot, we will move on to the next section: **"Tech Stack"** and a radically simplified **"Getting Started"** guide.
+
+
+
+
+
+
+
+
+
+
+
+
 
 -->
 
@@ -185,6 +225,25 @@ cd knowledge_base_assistant
 export POSTGRES_HOST=localhost
 python app.py
 ```
+
+### Restarting and cleaning all data
+
+To clean all data from the database and grafana you need to
+re-build all containers and database.
+
+To do this, run:
+
+```bash
+pipenv shell
+
+docker-compose down -v
+
+docker-compose up --build -d
+
+pipenv run python -m knowledge_base_assistant.db_prep
+```
+
+
 
 ### Running with Docker (without compose)
 
