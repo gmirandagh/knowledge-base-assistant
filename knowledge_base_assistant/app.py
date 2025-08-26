@@ -17,7 +17,6 @@ app.config['JSON_SORT_KEYS'] = False
 # Setup Babel for i18n
 babel = Babel(app)
 
-# Configuration for monitoring features
 ENABLE_MONITORING = os.getenv('ENABLE_MONITORING', '1') == '1'
 
 
@@ -34,7 +33,6 @@ def get_locale():
 babel = Babel(app, locale_selector=get_locale)
 
 
-# Run before request to set language
 @app.before_request
 def before_request():
     g.locale = str(get_locale())
@@ -50,16 +48,22 @@ def set_language(lang):
     return response
 
 
-# Web page from root URL
 @app.route('/')
 def home():
     """Renders the main question-answering web page."""
-    return render_template('index.html')
+    grafana_base_url = os.getenv("GRAFANA_BASE_URL")
+    grafana_dashboard_uid = os.getenv("GRAFANA_DASHBOARD_UID")
+    
+    return render_template(
+        'index.html', 
+        grafana_base_url=grafana_base_url,
+        grafana_dashboard_uid=grafana_dashboard_uid
+    )
 
 
 # API Endpoints
 
-# 1. Ask question (Enhanced with monitoring)
+# 1. Ask question
 @app.route('/ask', methods=['POST'])
 def ask_question():
     """
@@ -163,31 +167,26 @@ def ask_question():
     question = data.get("question")
     enable_request_monitoring = data.get("enable_monitoring", False)
 
-    # User's language
     user_language = g.get('locale', 'en')
 
     if not question:
         return jsonify({"error": "Missing 'question'"}), 400
 
-    # Determine if monitoring should be enabled for this request
     use_monitoring = ENABLE_MONITORING or enable_request_monitoring
 
     try:
         if use_monitoring:
-            # Enhanced RAG with monitoring
             answer, context, metrics = rag.answer_question(
                 question, 
                 user_language=user_language, 
                 evaluate=True
             )
         else:
-            # Standard RAG (backward compatible)
             answer, context = rag.answer_question(question, user_language=user_language)
             metrics = None
 
         conversation_id = str(uuid.uuid4())
 
-        # Save conversation with optional metrics
         db.save_conversation(
             conversation_id, 
             question, 
@@ -197,7 +196,6 @@ def ask_question():
             user_language=user_language
         )
 
-        # Prepare response
         response_data = {
             "question": question,
             "answer": answer,
@@ -205,7 +203,6 @@ def ask_question():
             "conversation_id": conversation_id
         }
 
-        # Add metrics to response if monitoring was enabled
         if use_monitoring and metrics:
             response_data["metrics"] = metrics
 
@@ -274,7 +271,7 @@ def submit_feedback():
         return jsonify({"error": "An error occurred while saving feedback"}), 500
 
 
-# 3. Get conversation history (New monitoring endpoint)
+# 3. Conversation history
 @app.route('/conversations', methods=['GET'])
 def get_conversations():
     """
@@ -311,7 +308,7 @@ def get_conversations():
             count:
               type: integer
     """
-    limit = min(int(request.args.get('limit', 10)), 100)  # Cap at 100
+    limit = min(int(request.args.get('limit', 10)), 100)
     relevance = request.args.get('relevance')
     language = request.args.get('language')
 
@@ -322,7 +319,6 @@ def get_conversations():
             user_language=language
         )
         
-        # Convert to dict for JSON serialization
         conversations_list = [dict(conv) for conv in conversations]
         
         return jsonify({
@@ -334,7 +330,7 @@ def get_conversations():
         return jsonify({"error": "An error occurred while fetching conversations"}), 500
 
 
-# 4. Get feedback statistics (New monitoring endpoint)
+# 4. Feedback stats
 @app.route('/stats/feedback', methods=['GET'])
 def get_feedback_statistics():
     """
@@ -377,7 +373,7 @@ def get_feedback_statistics():
         return jsonify({"error": "An error occurred while fetching statistics"}), 500
 
 
-# 5. Get conversation analytics (New monitoring endpoint)
+# 5. Conversation analytics
 @app.route('/stats/conversations', methods=['GET'])
 def get_conversation_statistics():
     """
@@ -450,7 +446,7 @@ def get_conversation_statistics():
         return jsonify({"error": "An error occurred while fetching analytics"}), 500
 
 
-# 6. Get specific conversation (New monitoring endpoint)
+# 6. Specific conversation
 @app.route('/conversations/<conversation_id>', methods=['GET'])
 def get_conversation(conversation_id):
     """
@@ -490,7 +486,7 @@ def get_conversation(conversation_id):
         return jsonify({"error": "An error occurred while fetching the conversation"}), 500
 
 
-# Health check endpoint
+# Health check
 @app.route('/health', methods=['GET'])
 def health_check():
     """
@@ -512,7 +508,6 @@ def health_check():
               example: true
     """
     try:
-        # Test database connection
         db.get_db_connection().close()
         
         return jsonify({

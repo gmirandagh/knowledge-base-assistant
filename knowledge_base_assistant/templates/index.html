@@ -3,38 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Use the gettext function `_()` for translation -->
     <title>{{ _('Knowledge Base Assistant') }}</title>
     <style>
-        /* CSS is unchanged */
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f6f8; color: #333; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .container { background-color: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 700px; padding: 2rem; }
-        h1 { text-align: center; color: #1a202c; }
+        :root {
+            --bg-primary: #111827;
+            --bg-secondary: #1f2937;
+            --border-color: #374151;
+            --text-primary: #e5e7eb;
+            --text-secondary: #9ca3af;
+            --accent-color: #3b82f6;
+            --accent-hover: #2563eb;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 2rem 1rem;
+            box-sizing: border-box;
+        }
+        .container, .monitoring-container {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            width: 100%;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+        .container { max-width: 700px; margin-bottom: 2rem; }
+        .monitoring-container { max-width: 1200px; }
+        h1, h2, h3, h4 { color: #f9fafb; text-align: center; }
+        h1 { margin-bottom: 2rem; }
         form { display: flex; gap: 10px; margin-bottom: 1.5rem; }
-        input[type="text"] { flex-grow: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; }
-        button { background-color: #007bff; color: white; border: none; padding: 12px 20px; border-radius: 6px; font-size: 1rem; cursor: pointer; transition: background-color 0.2s; }
-        button:hover { background-color: #0056b3; }
-        button:disabled { background-color: #aaa; cursor: not-allowed; }
-        .result-area { border-top: 1px solid #eee; padding-top: 1.5rem; }
-        .answer, .context, .feedback { margin-bottom: 1.5rem; }
-        .answer h2, .context h3 { margin-top: 0; color: #4a5568; }
+        input[type="text"] {
+            flex-grow: 1; padding: 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 1rem;
+            background-color: #374151; color: var(--text-primary);
+        }
+        input[type="text"]::placeholder { color: var(--text-secondary); }
+        button {
+            background-color: var(--accent-color); color: white; border: none; padding: 12px 20px; border-radius: 6px;
+            font-size: 1rem; cursor: pointer; transition: background-color 0.2s;
+        }
+        button:hover { background-color: var(--accent-hover); }
+        button:disabled { background-color: #4b5563; cursor: not-allowed; }
+        .result-area { border-top: 1px solid var(--border-color); padding-top: 1.5rem; }
         .answer p { font-size: 1.1rem; line-height: 1.6; }
-        .context-item { background-color: #f9f9f9; border: 1px solid #eee; border-radius: 6px; margin-bottom: 10px; }
+        .context-item { background-color: #374151; border: 1px solid #4b5563; border-radius: 6px; margin-bottom: 10px; }
         .context-item summary { padding: 10px; font-weight: bold; cursor: pointer; }
-        .context-item pre { background-color: #f0f0f0; padding: 10px; margin: 0; border-top: 1px solid #eee; white-space: pre-wrap; word-wrap: break-word; font-size: 0.9rem; }
-        .feedback-buttons button { margin-right: 10px; background-color: #6c757d; }
-        .feedback-buttons button:hover { background-color: #5a6268; }
+        .context-item pre { background-color: #111827; padding: 10px; margin: 0; border-top: 1px solid #4b5563; white-space: pre-wrap; word-wrap: break-word; font-size: 0.9rem; }
+        .feedback-buttons button { background-color: #4b5563; } .feedback-buttons button:hover { background-color: #6b7280; }
+        .language-switcher { position: absolute; top: 15px; right: 20px; font-size: 0.9rem; }
+        .language-switcher a { color: var(--accent-color); text-decoration: none; } .language-switcher a:hover { text-decoration: underline; }
+
+        /* Dashboard Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr); /* Using a 6-column grid for flexibility */
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+        .grafana-panel {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        .grafana-panel h4 { margin-top: 0; text-align: left; font-size: 1rem; }
+        .grafana-panel iframe { width: 100%; height: 280px; border: none; }
+        
+        /* Spanning rules for grid items */
+        .panel-full-width { grid-column: span 6; }
+        .panel-third { grid-column: span 2; }
+        .panel-two-thirds { grid-column: span 4; }
+        .panel-half { grid-column: span 3; }
+        
+        /* Responsive adjustments */
+        @media (max-width: 1024px) {
+            .panel-third, .panel-two-thirds, .panel-half { grid-column: span 6; }
+        }
     </style>
 </head>
 <body>
 
-<!-- LANGUAGE SWITCHER -->
-<div style="position: absolute; top: 10px; right: 20px; font-size: 0.9rem;">
+<div class="language-switcher">
     <a href="/set_language/en">English</a> |
     <a href="/set_language/es">Español</a> |
     <a href="/set_language/it">Italiano</a>
 </div>
-<!-- END OF LANGUAGE SWITCHER -->
 
 <div class="container">
     <h1>{{ _('Knowledge Base Assistant') }}</h1>
@@ -42,129 +101,92 @@
         <input type="text" id="question-input" placeholder="{{ _('Ask a question...') }}" required>
         <button type="submit" id="submit-button">{{ _('Ask') }}</button>
     </form>
-
     <div class="result-area" id="result-area" style="display:none;">
-        <div class="answer">
-            <h2>{{ _('Answer') }}</h2>
-            <p id="answer-text"></p>
-        </div>
-
+        <div class="answer"><h2>{{ _('Answer') }}</h2><p id="answer-text"></p></div>
         <div class="feedback">
-            <div id="feedback-prompt" class="feedback-prompt">{{ _('Was this answer helpful?') }}</div>
-            <div id="feedback-buttons" class="feedback-buttons">
-                <button onclick="sendFeedback(1)">{{ _('👍 Yes') }}</button>
-                <button onclick="sendFeedback(-1)">{{ _('👎 No') }}</button>
-            </div>
-            <div id="feedback-thanks" style="display:none; color: green;">{{ _('Thank you for your feedback!') }}</div>
+            <div id="feedback-prompt">{{ _('Was this answer helpful?') }}</div>
+            <div id="feedback-buttons"><button onclick="sendFeedback(1)">{{ _('👍 Yes') }}</button><button onclick="sendFeedback(-1)">{{ _('👎 No') }}</button></div>
+            <div id="feedback-thanks" style="display:none; color: #22c55e;">{{ _('Thank you for your feedback!') }}</div>
         </div>
-
-        <div class="context">
-            <h3>{{ _('Sources') }}</h3>
-            <div id="context-list"></div>
-        </div>
+        <div class="context"><h3>{{ _('Sources') }}</h3><div id="context-list"></div></div>
     </div>
 </div>
 
+{% if grafana_base_url and grafana_dashboard_uid %}
+<div class="monitoring-container">
+    <h2>{{ _('System Monitoring Dashboard') }}</h2>
+    <div class="dashboard-grid">
+        <div class="grafana-panel panel-full-width">
+            <h4>{{ _('Last 5 conversations') }}</h4>
+            <iframe src="{{ grafana_base_url }}/d-solo/{{ grafana_dashboard_uid }}/knowledge-base-assistant?orgId=1&refresh=30s&theme=dark&panelId=12"></iframe>
+        </div>
+        <div class="grafana-panel panel-third">
+            <h4>{{ _('+1/-1 Feedback') }}</h4>
+            <iframe src="{{ grafana_base_url }}/d-solo/{{ grafana_dashboard_uid }}/knowledge-base-assistant?orgId=1&refresh=30s&theme=dark&panelId=14"></iframe>
+        </div>
+        <div class="grafana-panel panel-two-thirds">
+            <h4>{{ _('Relevancy') }}</h4>
+            <iframe src="{{ grafana_base_url }}/d-solo/{{ grafana_dashboard_uid }}/knowledge-base-assistant?orgId=1&refresh=30s&theme=dark&panelId=4"></iframe>
+        </div>
+        <div class="grafana-panel panel-half">
+            <h4>{{ _('OpenAI cost') }}</h4>
+            <iframe src="{{ grafana_base_url }}/d-solo/{{ grafana_dashboard_uid }}/knowledge-base-assistant?orgId=1&refresh=30s&theme=dark&panelId=10"></iframe>
+        </div>
+        <div class="grafana-panel panel-half">
+            <h4>{{ _('Tokens') }}</h4>
+            <iframe src="{{ grafana_base_url }}/d-solo/{{ grafana_dashboard_uid }}/knowledge-base-assistant?orgId=1&refresh=30s&theme=dark&panelId=8"></iframe>
+        </div>
+        <div class="grafana-panel panel-half">
+            <h4>{{ _('Model used') }}</h4>
+            <iframe src="{{ grafana_base_url }}/d-solo/{{ grafana_dashboard_uid }}/knowledge-base-assistant?orgId=1&refresh=30s&theme=dark&panelId=6"></iframe>
+        </div>
+        <div class="grafana-panel panel-half">
+            <h4>{{ _('Response time') }}</h4>
+            <iframe src="{{ grafana_base_url }}/d-solo/{{ grafana_dashboard_uid }}/knowledge-base-assistant?orgId=1&refresh=30s&theme=dark&panelId=2"></iframe>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <script>
-    // Create a translations object for JavaScript, populated by Jinja2
+    // This script block remains the same as your original, as it controls the chat functionality perfectly.
+    // The monitoring dashboard does not require any additional JavaScript.
+    
     const translations = {
-        thinking: "{{ _('Thinking...') }}",
-        ask: "{{ _('Ask') }}",
-        error: "{{ _('An error occurred. Please try again.') }}",
-        noSources: "{{ _('No sources were retrieved for this answer.') }}",
-        source: "{{ _('Source') }}",
-        metadata: "{{ _('Metadata') }}",
-        section: "{{ _('Section') }}",
-        page: "{{ _('Page') }}",
-        authors: "{{ _('Authors') }}",
-        year: "{{ _('Year') }}"
+        thinking: "{{ _('Thinking...') }}", ask: "{{ _('Ask') }}", error: "{{ _('An error occurred. Please try again.') }}",
+        noSources: "{{ _('No sources were retrieved for this answer.') }}", source: "{{ _('Source') }}", metadata: "{{ _('Metadata') }}",
+        section: "{{ _('Section') }}", page: "{{ _('Page') }}", authors: "{{ _('Authors') }}", year: "{{ _('Year') }}"
     };
-
-    const form = document.getElementById('qa-form');
-    const questionInput = document.getElementById('question-input');
-    const submitButton = document.getElementById('submit-button');
-    const resultArea = document.getElementById('result-area');
-    const answerText = document.getElementById('answer-text');
-    const contextList = document.getElementById('context-list');
-    const feedbackButtons = document.getElementById('feedback-buttons');
-    const feedbackThanks = document.getElementById('feedback-thanks');
+    const form = document.getElementById('qa-form'), questionInput = document.getElementById('question-input'), submitButton = document.getElementById('submit-button');
+    const resultArea = document.getElementById('result-area'), answerText = document.getElementById('answer-text'), contextList = document.getElementById('context-list');
+    const feedbackButtons = document.getElementById('feedback-buttons'), feedbackThanks = document.getElementById('feedback-thanks');
     let conversationId = null;
-
     form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const question = questionInput.value;
-        if (!question) return;
-
-        // Use the translations object
-        submitButton.disabled = true;
-        submitButton.textContent = translations.thinking;
-        resultArea.style.display = 'none';
-        feedbackThanks.style.display = 'none';
-        feedbackButtons.style.display = 'block';
-
+        e.preventDefault(); const question = questionInput.value; if (!question) return;
+        submitButton.disabled = true; submitButton.textContent = translations.thinking; resultArea.style.display = 'none';
+        feedbackThanks.style.display = 'none'; feedbackButtons.style.display = 'block';
         try {
-            const response = await fetch('/ask', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ question: question })
-            });
-
-            const data = await response.json();
-            
-            conversationId = data.conversation_id;
-            answerText.textContent = data.answer;
-            
-            contextList.innerHTML = '';
+            const response = await fetch('/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: question }) });
+            const data = await response.json(); conversationId = data.conversation_id; answerText.textContent = data.answer; contextList.innerHTML = '';
             if (data.context && data.context.length > 0) {
                 data.context.forEach(item => {
-                    const detail = document.createElement('details');
-                    detail.className = 'context-item';
-                    
-                    let summaryText = `📄 ${translations.source}: ${item.title || 'N/A'}`;
-                    if(item.type === 'metadata') {
-                       summaryText = `📝 ${translations.metadata}: ${item.title || 'N/A'}`;
-                    }
-                    
-                    let contentText = '';
-                    if(item.type === 'content') {
-                        contentText = `${translations.section}: ${item.section_title || 'N/A'}\n${translations.page}: ${item.page_number || 'N/A'}\n\n${item.content || ''}`;
-                    } else if(item.type === 'metadata') {
-                        contentText = `${translations.authors}: ${(item.authors || []).join(', ')}\n${translations.year}: ${item.year || 'N/A'}`;
-                    }
-                    
-                    detail.innerHTML = `<summary>${summaryText}</summary><pre>${contentText}</pre>`;
-                    contextList.appendChild(detail);
+                    const detail = document.createElement('details'); detail.className = 'context-item';
+                    let summaryText = `📄 ${translations.source}: ${item.title || 'N/A'}`; if(item.type === 'metadata') { summaryText = `📝 ${translations.metadata}: ${item.title || 'N/A'}`; }
+                    let contentText = ''; if(item.type === 'content') { contentText = `${translations.section}: ${item.section_title || 'N/A'}\n${translations.page}: ${item.page_number || 'N/A'}\n\n${item.content || ''}`; }
+                    else if(item.type === 'metadata') { contentText = `${translations.authors}: ${(item.authors || []).join(', ')}\n${translations.year}: ${item.year || 'N/A'}`; }
+                    detail.innerHTML = `<summary>${summaryText}</summary><pre>${contentText}</pre>`; contextList.appendChild(detail);
                 });
-            } else {
-                contextList.innerHTML = `<p>${translations.noSources}</p>`;
-            }
-
+            } else { contextList.innerHTML = `<p>${translations.noSources}</p>`; }
             resultArea.style.display = 'block';
-        } catch (error) {
-            answerText.textContent = translations.error;
-            resultArea.style.display = 'block';
-            console.error('Error:', error);
-        } finally {
-            submitButton.disabled = false;
-            submitButton.textContent = translations.ask;
-        }
+        } catch (error) { answerText.textContent = translations.error; resultArea.style.display = 'block'; console.error('Error:', error);
+        } finally { submitButton.disabled = false; submitButton.textContent = translations.ask; }
     });
-
     async function sendFeedback(feedbackValue) {
-        // This function has no user-facing text, so no changes needed
         if (!conversationId) return;
         try {
-            await fetch('/feedback', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ conversation_id: conversationId, feedback: feedbackValue })
-            });
-            feedbackButtons.style.display = 'none';
-            feedbackThanks.style.display = 'block';
-        } catch (error) {
-            console.error('Feedback Error:', error);
-            alert('Could not submit feedback.');
-        }
+            await fetch('/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversation_id: conversationId, feedback: feedbackValue }) });
+            feedbackButtons.style.display = 'none'; feedbackThanks.style.display = 'block';
+        } catch (error) { console.error('Feedback Error:', error); alert('Could not submit feedback.'); }
     }
 </script>
 

@@ -23,19 +23,21 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       PYTHONPATH: /app
       PROJECT_ROOT: /app
-      # Monitoring Configuration
       ENABLE_MONITORING: ${ENABLE_MONITORING:-1}
       AUTO_MIGRATE: ${AUTO_MIGRATE:-1}
       RUN_TIMEZONE_CHECK: ${RUN_TIMEZONE_CHECK:-1}
       TZ: ${TZ:-Europe/Berlin}
       GRAFANA_ADMIN_USER: ${GRAFANA_ADMIN_USER}
       GRAFANA_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GRAFANA_BASE_URL: http://localhost:3000
+      GRAFANA_DASHBOARD_UID: ${GRAFANA_DASHBOARD_UID}
     ports:
       - "${APP_PORT:-8000}:8000"
     volumes:
       - .:/app   
     depends_on:
       - postgres
+      - grafana
     restart: always
 
   grafana:
@@ -47,6 +49,9 @@ services:
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
     depends_on:
       - postgres
     restart: always
