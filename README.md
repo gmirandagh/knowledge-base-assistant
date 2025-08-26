@@ -18,17 +18,22 @@ This project was developed as a Final Master's Thesis for the *Master in Data Sc
 
 ## Key Features
 
-✨ **Interactive Web UI:** A clean, modern web interface for asking questions and receiving answers, complete with an integrated real-time monitoring dashboard.
-<br>
-📊 **Embedded Grafana Dashboard:** Live, interactive visualizations of system performance, cost, and user feedback are embedded directly into the web UI.
-<br>
-🤖 **Interactive CLI:** A powerful command-line interface (`cli.py`) for interacting with the assistant, submitting feedback, and viewing system health metrics directly in your terminal.
-<br>
-🌐 **Multi-Language Support:** The RAG pipeline is capable of handling queries and generating answers in multiple languages (English, Spanish, and Italian supported).
-<br>
-📈 **Comprehensive Monitoring:** Detailed logging of conversations, feedback, and performance metrics to a PostgreSQL database, visualized in Grafana.
-<br>
-🐳 **Containerized with Docker:** The entire application stack is containerized for easy, one-command setup and consistent deployment.
+✨ **Modern Web Interface:** A clean, responsive web interface with real-time chat functionality, multi-language support (English, Spanish, Italian), and integrated user feedback collection.
+
+📊 **Embedded Grafana Dashboard:** Live, interactive system monitoring with 7 comprehensive panels displaying conversations, feedback, costs, response times, and model usage - all embedded directly in the web UI.
+
+🖥️ **Interactive CLI:** A powerful command-line interface with rich terminal output, system health metrics display, random question testing, and comprehensive monitoring controls.
+
+🌐 **Multi-Language Support:** Full internationalization with Flask-Babel, supporting English, Spanish, and Italian for both queries and UI elements.
+
+📈 **Comprehensive Monitoring:** Real-time logging of conversations, performance metrics, cost tracking, and user feedback to PostgreSQL database with automated Grafana visualization.
+
+🐳 **Production-Ready Deployment:** Complete containerized stack with Docker Compose, including automated database initialization, health checks, and service dependencies.
+
+🔍 **Intelligent Query Routing:** Smart LLM-based routing system that determines context relevance and handles both content queries and metadata queries appropriately.
+
+📊 **Advanced Analytics:** Built-in system health endpoints, conversation statistics, feedback analysis, and cost monitoring accessible via API and CLI.
+
 
 ## Live Demo & Screenshots
 
@@ -46,39 +51,22 @@ Watch a full video demo of the project, including setup and usage instructions:
   </a>
 </p>
 
----
-
-### **Action Items & Questions for You:**
-
-2.  **Update Screenshot:** The current `image.png` might not show the final UI with the embedded dashboard. **Could you please take a new screenshot of the full web page** (chat on top, dashboard below) and replace the existing `images/image.png`? This will be a huge visual upgrade.
-3.  **Confirm Master's Program Name:** I kept the name you had. Is `(Online) Máster Data Science, Big Data & Business Analytics 2024-2025 (clase 4)]()` the full, correct title? I've updated it slightly for clarity.
-
-Once you confirm you're happy with this section and have updated the screenshot, we will move on to the next section: **"Tech Stack"** and a radically simplified **"Getting Started"** guide.
-
-
-
-
-
-
-
-
-
-
-
-
-
 -->
 
-## Project overview
+## Project Overview
 
-The Knowledge Base Assistant is a RAG (Retrieval-Augmented Generation) application designed to serve as an intelligent interface for a library of technical documents.
+The Knowledge Base Assistant is a sophisticated RAG (Retrieval-Augmented Generation) application that transforms technical document libraries into intelligent, conversational interfaces. Built as a Master's thesis project, it demonstrates production-ready AI application development with comprehensive monitoring and multi-modal access.
 
-The main use cases include:
+**Current Implementation:** This MVP focuses on Oil & Gas industry technical publications, specifically SPE (Society of Petroleum Engineers) papers covering organizational behavior management and human performance. However, the architecture is designed for adaptability across any technical domain.
 
-1.  **Specific Information Retrieval:** Answering direct questions by finding the exact relevant text within the document library.
-2.  **Conceptual Search:** Recommending related topics or concepts when a user's query is broad.
-3.  **Summarization and Synthesis:** Providing summaries of document sections or synthesizing information from multiple sources to answer complex questions.
-4.  **Conversational Interaction:** Making it easy to get information without manually sifting through hundreds of pages of documentation.
+The system intelligently routes queries through multiple retrieval strategies:
+
+1. **Domain-Specific Knowledge Retrieval:** Answers questions directly related to the technical content within the document library using semantic and full-text search.
+2. **Intelligent Query Routing:** Uses an LLM router to determine context relevance and gracefully handles out-of-scope queries.
+3. **Metadata Discovery:** Efficiently handles bibliographic queries about authors, publication years, and document details.
+4. **Multi-Modal Access:** Provides both intuitive web interface and powerful CLI for different user workflows.
+5. **Production Monitoring:** Tracks system performance, costs, user satisfaction, and provides real-time analytics.
+
 
 ## Dataset
 
@@ -104,577 +92,590 @@ You can find the data stored in JSONL format in [`data/data.jsonl`](data/data.js
 
 ## Technologies
 
-- Python 3.12
-- Docker and Docker Compose for containerization
-- [Minsearch](https://github.com/alexeygrigorev/minsearch) for full-text search
-- Flask as the API interface (see [Background](#background) for more information on Flask)
-- Grafana for monitoring and PostgreSQL as the backend for it
-- OpenAI as an LLM
+- **Python 3.12** - Core application runtime
+- **Docker and Docker Compose** - Containerization and orchestration
+- **[Minsearch](https://github.com/alexeygrigorev/minsearch)** - In-memory full-text search engine
+- **Flask** - Web framework and API interface
+- **Flask-Babel** - Internationalization and multi-language support
+- **Gunicorn** - Production WSGI HTTP server
+- **PostgreSQL** - Database for conversation logs and monitoring data
+- **Grafana** - Real-time monitoring dashboards and analytics
+- **OpenAI API** - Large Language Model integration
+- **Flasgger** - API documentation with Swagger UI
 
 ## Preparation
 
-Since we use OpenAI, you need to provide the API key:
+### Required Setup
 
-1. Install `direnv`. If you use Ubuntu, run `sudo apt install direnv` and then `direnv hook bash >> ~/.bashrc`.
-    ```bash
-    sudo apt-get update && sudo apt-get install direnv -y
-    
-    direnv hook bash >> ~/.bashrc
-    ```
+1. **OpenAI API Key**: You need an OpenAI API key for the LLM functionality.
+   - Create a new project in your OpenAI account and generate a separate API key
+   - Copy `.envrc_template` to `.env` and update the values
+   - Replace `YOUR_KEY` with your actual OpenAI API key
 
-2. Copy `.envrc_template` into `.envrc` and insert your key there.
+2. **Docker and Docker Compose**: Required for running the application stack.
+   - Install Docker and Docker Compose on your system
+   - Ensure Docker daemon is running
 
-3. For OpenAI, it's recommended to create a new project and use a separate key.
-    Modify [.env](.env) replacing 'YOUR_KEY' by your actual generated API key.
+### Environment Configuration
 
-4. Run `direnv allow` to load the key into your environment.
-    ```bash
-    direnv allow
-    ```
+Copy the template and update the required values:
 
-For dependency management, we use pipenv, so you need to install it:
+```bash
+cp .envrc_template .env
+```
+
+Edit the `.env` file and replace the placeholder values:
+
+**Required Variables:**
+```bash
+# Application (REQUIRED)
+OPENAI_API_KEY='your-openai-api-key-here'
+
+# Grafana (REQUIRED - set your own secure password)
+GRAFANA_ADMIN_PASSWORD='your-secure-password'
+```
+
+**Optional Variables (have sensible defaults):**
+```bash
+# PostgreSQL (can keep defaults)
+POSTGRES_DB=knowledge_base_assistant
+POSTGRES_USER=user
+POSTGRES_PASSWORD=password
+POSTGRES_PORT=5432
+
+# Application settings
+APP_PORT=8000
+TZ=Europe/Berlin  # Change to your timezone
+
+# Grafana
+GRAFANA_ADMIN_USER=admin
+GRAFANA_DASHBOARD_UID='YOUR_UID'  # Auto-generated by system
+```
+
+**Note:** The `GRAFANA_DASHBOARD_UID` is automatically set during initialization, so you can leave the placeholder value.
+
+### Python Dependencies (for local development)
+
+For local development outside Docker, install pipenv:
 
 ```bash
 pip install pipenv
-```
-
-Once installed, you can install the app dependencies:
-
-```bash
 pipenv install --dev
 ```
 
-## Running the application
+## Running the Application
 
-### Database configuration
+### Quick Start with Docker Compose (Recommended)
 
-Before the application starts for the first time, the database
-needs to be initialized.
-
-First, run `postgres`:
+The simplest way to run the complete application stack:
 
 ```bash
-docker-compose up postgres
+# First time setup - builds images and initializes database
+docker-compose up --build -d
+
+# Check all services are running
+docker-compose ps
+
+# Access the application
+# Web UI: http://localhost:8000
+# Grafana: http://localhost:3000 (admin/admin)
 ```
 
-Then run the [`db_prep.py`](knowledge_base_assistant/db_prep.py) script:
+**Important**: The database is reset each time you run `docker-compose down` followed by `docker-compose up`. For subsequent startups that preserve your data, use:
 
 ```bash
-pipenv shell
-
-cd knowledge_base_assistant
-
-export POSTGRES_HOST=localhost
-
-python db_prep.py
+# Restart existing containers (preserves database)
+docker-compose up -d
 ```
 
-To check the content of the database, use `pgcli` (already
-installed with pipenv):
+### Running Locally (Development)
+
+If you want to run the application locally for development:
 
 ```bash
-pipenv run pgcli -h localhost -U your_username -d course_assistant -W
-```
+# Start only PostgreSQL and Grafana
+docker-compose up postgres grafana -d
 
-You can view the schema using the `\d` command:
-
-```sql
-\d conversations;
-```
-
-And select from this table:
-
-```sql
-select * from conversations;
-```
-
-### Running with Docker-Compose
-
-The easiest way to run the application is with `docker-compose`:
-
-```bash
-docker-compose up
-```
-
-Some quick references for Docker-compose commands to stop and resume in [Background](#background)
-
-
-### Running locally
-
-If you want to run the application locally,
-start only postres and grafana:
-
-```bash
-docker-compose up postgres grafana
-```
-
-If you previously started all applications with
-`docker-compose up`, you need to stop the `app`:
-
-```bash
+# Stop the containerized app if it's running
 docker-compose stop app
-```
 
-Now run the app on your host machine:
-
-```bash
+# Set up local environment
 pipenv shell
-
 cd knowledge_base_assistant
 
+# Initialize database (first time only)
 export POSTGRES_HOST=localhost
+python db_prep.py
+
+# Run the Flask development server
 python app.py
 ```
 
-### Restarting and cleaning all data
+The application will be available at `http://localhost:5000` (Flask dev server) while Grafana remains at `http://localhost:3000`.
 
-To clean all data from the database and grafana you need to
-re-build all containers and database.
+### Accessing the Database
 
-To do this, run:
+To inspect the database directly:
 
 ```bash
-pipenv shell
+# Install pgcli (if not already installed)
+pip install pgcli
 
+# Connect to database
+pgcli -h localhost -U user -d knowledge_base_assistant -W
+```
+
+Example queries:
+```sql
+-- View conversation count
+SELECT COUNT(*) FROM conversations;
+
+-- View recent conversations
+SELECT question, answer, timestamp FROM conversations ORDER BY timestamp DESC LIMIT 5;
+
+-- View feedback
+SELECT conversation_id, feedback FROM feedback;
+```
+
+### Stopping the Application
+
+```bash
+# Stop services (preserves data)
+docker-compose stop
+
+# Stop and remove containers (preserves data volumes)
+docker-compose down
+
+# Stop and remove everything including data (⚠️ DATA LOSS)
 docker-compose down -v
-
-docker-compose up --build -d
-
-pipenv run python -m knowledge_base_assistant.db_prep
 ```
 
 
+## Using the Application
 
-### Running with Docker (without compose)
+### Web Interface
 
-Sometimes you might want to run the application in
-Docker without Docker Compose, e.g., for debugging purposes.
+The primary way to interact with the Knowledge Base Assistant is through the web interface:
 
-First, prepare the environment by running Docker Compose
-as in the previous section.
+1. **Access the Application**: Open `http://localhost:8000` in your browser
+2. **Multi-language Support**: Use the language switcher (English/Español/Italiano) in the top-right corner
+3. **Ask Questions**: Type your question in the input field and click "Ask"
+4. **View Sources**: Expand the source details to see the specific documents and sections used
+5. **Provide Feedback**: Use the 👍/👎 buttons to rate answer quality
+6. **Monitor System**: Scroll down to view real-time Grafana dashboards embedded in the interface
 
-Next, build the image:
+### Interactive CLI
+
+For power users and testing, use the command-line interface:
 
 ```bash
-docker build -t knowledge-base-assistant .
+# Basic interactive mode
+python cli.py
+
+# Use random questions from ground truth dataset
+python cli.py --random
+
+# Custom ground truth file
+python cli.py --file path/to/your/questions.csv
 ```
 
-And run it:
+**CLI Features:**
+- System health metrics display
+- Rich terminal formatting
+- Conversation feedback collection
+- Random question testing from ground truth data
+- Detailed monitoring metrics per request
+
+### Direct RAG Module (Advanced)
+
+For direct access to the RAG pipeline without web interface:
 
 ```bash
-docker run -it --rm \
-    --network="knowledge-base-assistant_default" \
-    --env-file=".env" \
-    -p 8000:5000 \
-    knowledge-base-assistant
-```
-
-### Time configuration
-
-When inserting logs into the database, ensure the timestamps are
-correct. Otherwise, they won't be displayed accurately in Grafana.
-
-When you start the application, you will see the following in
-your logs:
-
-```
-Database timezone: Etc/UTC
-Database current time (UTC): 2024-08-24 06:43:12.169624+00:00
-Database current time (Europe/Berlin): 2024-08-24 08:43:12.169624+02:00
-Python current time: 2024-08-24 08:43:12.170246+02:00
-Inserted time (UTC): 2024-08-24 06:43:12.170246+00:00
-Inserted time (Europe/Berlin): 2024-08-24 08:43:12.170246+02:00
-Selected time (UTC): 2024-08-24 06:43:12.170246+00:00
-Selected time (Europe/Berlin): 2024-08-24 08:43:12.170246+02:00
-```
-
-Make sure the time is correct.
-
-You can change the timezone by replacing `TZ` in `.env`.
-
-On some systems, specifically WSL, the clock in Docker may get
-out of sync with the host system. You can check that by running:
-
-```bash
-docker run ubuntu date
-```
-
-If the time doesn't match yours, you need to sync the clock:
-
-```bash
-wsl
-
-sudo apt install ntpdate
-sudo ntpdate time.windows.com
-```
-
-Note that the time is in UTC.
-
-After that, start the application (and the database) again.
-
-
-## Using the application
-
-When the application is running, you can start using it.
-
-
-### CLI
-
-
-### Using the RAG CLI
-
-You can query the RAG pipeline directly from your terminal. This is useful for quick tests and scripting.
-
-**Prerequisites:** *Ensure you have completed the setup steps and activated the virtual environment before running these commands.*
-
-#### Usage
-
-```bash
-# First, activate the environment
+# Basic query (English)
 pipenv shell
+python -m knowledge_base_assistant.rag "Your question here"
 
-# Then, run the script
-python knowledge_base_assistant/rag.py [options] "Your question goes here"
+# Multi-language queries
+python -m knowledge_base_assistant.rag --lang es "¿Cuál es el tema principal?"
+python -m knowledge_base_assistant.rag --lang it "Chi sono gli autori?"
+
+# With detailed evaluation metrics
+python -m knowledge_base_assistant.rag "Your question" --evaluate
 ```
 
-#### Arguments and Options
+### API Integration
 
-*   **`query`** (Required): The question you want to ask. It must be the last argument and should be enclosed in quotes.
-*   **`--lang {en,es,it}`** (Optional): Specifies the language of the query.
-    *   `en`: English (default)
-    *   `es`: Spanish
-    *   `it`: Italian
-*   **`-h, --help`**: Shows the help message with all available options.
+The Flask API provides programmatic access with full monitoring capabilities:
 
----
-#### Basic Examples
-
-*   **English Query (Default):**
-    ```bash
-    python knowledge_base_assistant/rag.py "What is the main conclusion of the document about AI?"
-    ```
-
-*   **Spanish Query:**
-    ```bash
-    python knowledge_base_assistant/rag.py --lang es "¿Cuándo se publicaron los artículos?"
-    ```
-
-*   **Italian Query:**
-    ```bash
-    python knowledge_base_assistant/rag.py --lang it "Chi sono gli autori del documento sull'IA?"
-    ```
-
----
-#### Detailed Examples with Output
-
-##### **Example 1: Content Query**
-
-*Command:*
-```bash
-python knowledge_base_assistant/rag.py "What is the main conclusion of the document about AI?"
-```
-
-*Expected Output:*
-```bash
-✅ Loaded existing index from '/workspaces/knowledge-base-assistant/data/data_index.bin'
-
-🔍 Query: What is the main conclusion of the document about AI? (Language: en)
-
---> Performing standard content search.
-
-💡 Answer:
-
-The main conclusion of the document emphasizes that the methodologies implemented have led to significant improvements in human performance within organizations. The success of these improvements will depend on tailored implementation strategies and the application of coaching methods. Additionally, the document highlights the importance of measuring performance outcomes through statistical models, which is uncommon in human safety and engineering programs.
-```
-
----
-##### **Example 2: Metadata Query**
-
-*Command:*
-```bash
-python knowledge_base_assistant/rag.py --lang es "¿Cuándo se publicaron los artículos?"
-```
-
-*Expected Output:*
-```bash
-✅ Loaded existing index from '/workspaces/knowledge-base-assistant/data/data_index.bin'
-
-🔍 Query: ¿Cuándo se publicaron los artículos? (Language: es)
-
---> Original Query (es): ¿Cuándo se publicaron los artículos?
---> Translated English Query: When were the articles published?
---> Detected a metadata query. Retrieving metadata.
-
-💡 Answer:
-
-Los artículos se publicaron en los años 2023 y 2024.
-```
-
-
-### Using the application CLI
-
-We built an interactive CLI application using
-[questionary](https://questionary.readthedocs.io/en/stable/).
-
-To start it, run:
+#### 1. Ask Questions
 
 ```bash
-pipenv run python cli.py
+curl -X POST http://localhost:8000/ask \
+  -H "Content-Type: application/json" \
+  -d '{"question": "What are the main safety challenges in oil and gas?"}'
 ```
 
-You can also make it randomly select a question from
-[our ground truth dataset](data/ground-truth-retrieval.csv):
+Response includes answer, sources, conversation ID, and detailed metrics.
+
+#### 2. Submit Feedback
 
 ```bash
-pipenv run python cli.py --random
+curl -X POST http://localhost:8000/feedback \
+  -H "Content-Type: application/json" \
+  -d '{"conversation_id": "your-conversation-id", "feedback": 1}'
 ```
 
-### Using `requests`
+Use `1` for positive feedback, `-1` for negative.
 
-When the application is running, you can use
-[requests](https://requests.readthedocs.io/en/latest/)
-to send questions—use [test.py](test.py) for testing it:
+#### 3. System Statistics
 
 ```bash
-pipenv run python test.py
+# Conversation statistics
+curl "http://localhost:8000/stats/conversations?days=7"
+
+# Feedback summary
+curl "http://localhost:8000/stats/feedback"
+
+# Health check
+curl "http://localhost:8000/health"
 ```
 
-It will pick a random question from the ground truth dataset
-and send it to the app.
+### Testing with Random Questions
 
-
-### Interacting with the API via cURL
-
-You can interact directly with the Flask API using `curl` or any other API client. The API is served at `http://localhost:5000` when running the application locally.
-
-#### 1. Asking a Question
-
-To ask a question, send a POST request to the `/ask` endpoint with your question in the JSON body.
+Use the included test script to validate system functionality:
 
 ```bash
-# Define variables
-URL="http://localhost:5000"
-QUESTION="What are the elements of Situational Awareness?"
-DATA='{
-    "question": "'"${QUESTION}"'"
-}'
-
-# Send the request
-curl -X POST \
-    -H "Content-Type: application/json" \
-    -d "${DATA}" \
-    "${URL}/ask"
+# Test with random question from ground truth dataset
+python test.py
 ```
 
-The API will respond with the answer, a unique conversation ID, and the sources used for the context:
-
-```json
-{
-    "question": "What is the main conclusion of the document about AI?",
-    "answer": "The main conclusion of the document emphasizes that the methodologies implemented have led to significant improvements in human performance within organizations. The success of these improvements will depend on tailored implementation strategies and the application of coaching methods.",
-    "context": [
-        {
-            "content": "The document highlights the importance of measuring performance outcomes through statistical models, which is uncommon in human safety and engineering programs...",
-            "document_id": "doc_1",
-            "page_number": "5",
-            "section_title": "Conclusion",
-            "title": "Improving Human Performance in Organizations",
-            "type": "content"
-        }
-    ],
-    "conversation_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef"
-}
-```
-
-#### 2. Submitting Feedback
-
-To submit feedback for an answer you received, send a POST request to the `/feedback` endpoint. You'll need the `conversation_id` from the previous response.
-
-```bash
-# Define variables
-URL="http://localhost:5000"
-CONVERSATION_ID="a1b2c3d4-e5f6-7890-1234-567890abcdef"
-FEEDBACK_DATA='{
-    "conversation_id": "'"${CONVERSATION_ID}"'",
-    "feedback": 1
-}'
-
-# Send the request
-curl -X POST \
-    -H "Content-Type: application/json" \
-    -d "${FEEDBACK_DATA}" \
-    "${URL}/feedback"
-```
-
-After submitting, you will receive an acknowledgment:
-
-```json
-{
-    "conversation_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
-    "feedback": 1,
-    "status": "feedback received"
-}
-```
+This script automatically selects a question from `data/ground-truth-retrieval.csv` and displays the complete API response including metrics and context sources.
 
 
 ## Code
 
-The code for the application is in the [`knowledge_base_assistant`](knowledge_base_assistant/) folder:
+The application code is organized in the [`knowledge_base_assistant`](knowledge_base_assistant/) folder with a modular architecture supporting both web and API interfaces:
 
-- [`app.py`](knowledge_base_assistant/app.py) - the Flask API, the main entrypoint to the application
-- [`rag.py`](knowledge_base_assistant/rag.py) - the main RAG logic for building the retrieving the data and building the prompt
-- [`ingest.py`](knowledge_base_assistant/ingest.py) - loading the data into the knowledge base
-- [`minsearch.py`](knowledge_base_assistant/minsearch.py) - an in-memory search engine
-- [`db.py`](knowledge_base_assistant/db.py) - the logic for logging the requests and responses to postgres
-- [`db_prep.py`](knowledge_base_assistant/db_prep.py) - the script for initializing the database
+### Core Application Files
 
-We also have some code in the project root directory:
+- [`app.py`](knowledge_base_assistant/app.py) - Flask application with web UI, API endpoints, and internationalization support. Includes routes for chat interface, feedback collection, system statistics, and health monitoring.
+- [`rag.py`](knowledge_base_assistant/rag.py) - Main RAG pipeline with intelligent query routing, multi-language support, cost tracking, and LLM-based relevance evaluation.
+- [`db.py`](knowledge_base_assistant/db.py) - Database operations including conversation logging, feedback storage, analytics queries, and comprehensive monitoring metrics.
+- [`ingest.py`](knowledge_base_assistant/ingest.py) - Data loading and preprocessing pipeline for converting document chunks into searchable format.
+- [`minsearch.py`](knowledge_base_assistant/minsearch.py) - Custom in-memory search engine optimized for semantic and full-text retrieval.
 
-- [`test.py`](test.py) - select a random question for testing
-- [`cli.py`](cli.py) - interactive CLI for the APP
+### Database and Infrastructure
 
-### Interface
+- [`db_prep.py`](knowledge_base_assistant/db_prep.py) - Database schema initialization script that creates tables with enhanced monitoring fields.
 
-Flask is used for serving the application as an API.
+### Internationalization
 
-Refer to the ["Using the Application" section](#using-the-application)
-for examples on how to interact with the application.
+- [`babel.cfg`](knowledge_base_assistant/babel.cfg) - Babel configuration for multi-language support
+- [`messages.pot`](knowledge_base_assistant/messages.pot) - Translation template file
+- [`translations/`](knowledge_base_assistant/translations/) - Compiled language files for English, Spanish, and Italian
+- [`templates/`](knowledge_base_assistant/templates/) - Jinja2 templates with internationalized web interface
 
+### Testing and Development
 
-<!-- TO BE UPDATED -->
+- [`rag-test.py`](knowledge_base_assistant/rag-test.py) - Development testing script for RAG pipeline evaluation and debugging
 
+### Root Directory Files
 
-### Ingestion
+- [`cli.py`](cli.py) - Interactive command-line interface with system health monitoring and rich terminal output
+- [`test.py`](test.py) - API testing script that selects random questions from ground truth dataset
+- [`gunicorn.conf.py`](gunicorn.conf.py) - Production server configuration
 
-The ingestion script is in [`ingest.py`](knowledge_base_assistant/ingest.py).
+### Interface Architecture
 
-Since an in-memory database is used, `minsearch`, as the
-knowledge base, the ingestion script is run at the startup
-of the application.
+The application provides multiple access methods:
 
-It's executed inside [`rag.py`](knowledge_base_assistant/rag.py)
-when imported.
+1. **Web Interface**: Modern responsive UI with embedded Grafana dashboards, multi-language support, and real-time chat functionality
+2. **REST API**: Complete programmatic access with detailed metrics and monitoring
+3. **CLI Interface**: Interactive terminal application with system health displays and testing capabilities
+4. **Direct Module Access**: Command-line access to RAG pipeline for advanced users
+
+### Monitoring Integration
+
+The application includes comprehensive observability:
+- Real-time conversation logging with detailed metrics
+- Cost tracking and token usage monitoring  
+- User feedback collection and analysis
+- Performance metrics and response time tracking
+- Embedded Grafana dashboards for live system monitoring
+
 
 ## Experiments
 
-For experiments, we use Jupyter notebooks.
-They are in the [`notebooks`](notebooks/) folder.
+The evaluation methodology has evolved significantly during development to accommodate the sophisticated RAG pipeline with intelligent query routing, multi-language support, and comprehensive monitoring capabilities.
 
-To start Jupyter, run:
+### Jupyter Notebooks
+
+Experiments are conducted using Jupyter notebooks in the [`notebooks`](notebooks/) folder:
 
 ```bash
 cd notebooks
 pipenv run jupyter notebook
 ```
 
-We have the following notebooks:
+**Available Notebooks:**
 
-- [`rag-test.ipynb`](notebooks/rag-test.ipynb): The RAG flow and evaluating the system.
-- [`evaluation-data-generation.ipynb`](notebooks/evaluation-data-generation.ipynb): Generating the ground truth dataset for retrieval evaluation.
+- [`rag-test.ipynb`](notebooks/rag-test.ipynb): Comprehensive RAG pipeline evaluation including query routing effectiveness, multi-language performance, cost analysis, and end-to-end system testing with the enhanced monitoring framework.
 
-### Retrieval evaluation
+- [`evaluation-data-generation.ipynb`](notebooks/evaluation-data-generation.ipynb): Ground truth dataset generation for retrieval evaluation, including question formulation, answer validation, and relevance assessment for the Oil & Gas domain technical documents.
 
-The basic approach - using `minsearch` without any boosting - gave the following metrics:
+### Evaluation Datasets
 
-- Hit rate: 90%
-- MRR: 70%
+The evaluation framework uses several datasets stored in the [`data`](data/) directory:
 
-### RAG flow evaluation
+- **`ground-truth-retrieval.csv`**: Curated question-answer pairs for retrieval evaluation
+- **`rag-eval-gpt-4o-mini.csv`**: Comprehensive RAG evaluation results with LLM-as-Judge metrics
+- **`data.jsonl`**: Complete processed knowledge base with embeddings and metadata
 
-We used the LLM-as-a-Judge metric to evaluate the quality
-of our RAG flow.
+### Evaluation Methodology
 
-For `gpt-4o-mini`, in a sample with 200 records, we had:
+The system employs a multi-dimensional evaluation approach:
 
-- 155 (78%) `RELEVANT`
-- 16 (8%) `PARTLY_RELEVANT`
-- 29 (14.5%) `NON_RELEVANT`
+#### 1. Retrieval Performance
+- **Semantic Search Effectiveness**: Evaluation of context relevance and ranking
+- **Query Routing Accuracy**: Assessment of the LLM router's ability to distinguish relevant vs. irrelevant queries
+- **Metadata Query Handling**: Performance on bibliographic and document-metadata queries
+
+#### 2. RAG Pipeline Evaluation
+- **LLM-as-Judge Assessment**: Using GPT-4o-mini for answer relevance evaluation
+- **Multi-language Performance**: Evaluation across English, Spanish, and Italian queries  
+- **Cost-Effectiveness Analysis**: Token usage and cost tracking per query type
+
+#### 3. Production Metrics
+- **Response Time Analysis**: End-to-end latency measurement
+- **User Feedback Integration**: Real-world relevance assessment from user interactions
+- **System Health Monitoring**: Performance tracking through embedded Grafana dashboards
+
+### Current Performance Baseline
+
+The enhanced system with intelligent query routing demonstrates:
+- Improved handling of out-of-domain queries through graceful fallback mechanisms
+- Multi-language query processing with automatic translation and localized responses
+- Comprehensive cost tracking with per-conversation metrics
+- Real-time performance monitoring integrated into the user interface
+
+*Note: Specific numerical metrics are continuously updated through the live monitoring system and can be accessed via the system statistics endpoints or Grafana dashboards.*
 
 ## Monitoring
 
-We use Grafana for monitoring the application. 
+The Knowledge Base Assistant includes comprehensive real-time monitoring through embedded Grafana dashboards, providing instant visibility into system performance, user interactions, and operational metrics.
 
-It's accessible at [localhost:3000](http://localhost:3000):
+### Access Methods
 
-- Login: "admin"
-- Password: "admin"
+**Primary Access - Embedded Dashboards:**
+- Integrated directly into the web interface at [http://localhost:8000](http://localhost:8000)
+- Scroll down in the main application to view live monitoring panels
+- No separate login required - dashboards are embedded seamlessly
 
-### Dashboards
+**Standalone Access (Advanced Users):**
+- Direct Grafana interface at [http://localhost:3000](http://localhost:3000)
+- Login credentials:
+  - Username: `admin` 
+  - Password: Set in your `.env` file as `GRAFANA_ADMIN_PASSWORD`
+
+### Dashboard Panels
+
+The monitoring system provides six key panels for comprehensive system oversight:
 
 <p align="center">
-  <img src="images/dash.png">
+  <img src="images/dash.png" alt="Grafana Monitoring Dashboard">
 </p>
 
-The monitoring dashboard contains several panels:
+#### 1. **Last 5 Conversations (Table)**
+Displays the most recent user interactions with detailed information:
+- **Question**: User's original query
+- **Answer**: System's response summary  
+- **Relevance**: Automated relevance assessment (RELEVANT, PARTLY_RELEVANT, NON_RELEVANT)
+- **Timestamp**: Exact time of interaction
 
-1. **Last 5 Conversations (Table):** Displays a table showing the five most recent conversations, including details such as the question, answer, relevance, and timestamp. This panel helps monitor recent interactions with users.
-2. **+1/-1 (Pie Chart):** A pie chart that visualizes the feedback from users, showing the count of positive (thumbs up) and negative (thumbs down) feedback received. This panel helps track user satisfaction.
-3. **Relevancy (Gauge):** A gauge chart representing the relevance of the responses provided during conversations. The chart categorizes relevance and indicates thresholds using different colors to highlight varying levels of response quality.
-4. **OpenAI Cost (Time Series):** A time series line chart depicting the cost associated with OpenAI usage over time. This panel helps monitor and analyze the expenditure linked to the AI model's usage.
-5. **Tokens (Time Series):** Another time series chart that tracks the number of tokens used in conversations over time. This helps to understand the usage patterns and the volume of data processed.
-6. **Model Used (Bar Chart):** A bar chart displaying the count of conversations based on the different models used. This panel provides insights into which AI models are most frequently used.
-7. **Response Time (Time Series):** A time series chart showing the response time of conversations over time. This panel is useful for identifying performance issues and ensuring the system's responsiveness.
+This panel helps monitor recent user engagement and response quality in real-time.
 
-### Setting up Grafana
+#### 2. **+1/-1 Feedback (Pie Chart)** 
+Visual representation of user satisfaction through thumbs up/down feedback:
+- **Green**: Positive feedback (thumbs up)
+- **Red**: Negative feedback (thumbs down)
+- **Percentage breakdown** of user satisfaction rates
 
-All Grafana configurations are in the [`grafana`](grafana/) folder:
+Essential for tracking user experience and system effectiveness.
 
-- [`init.py`](grafana/init.py) - for initializing the datasource and the dashboard.
-- [`dashboard.json`](grafana/dashboard.json) - the actual dashboard (taken from LLM Zoomcamp without changes).
+#### 3. **Relevancy (Gauge Charts)**
+Three separate gauge visualizations showing the distribution of response relevance:
+- **NON_RELEVANT**: Responses that didn't address the user's question
+- **PARTLY_RELEVANT**: Responses with partial relevance to the query
+- **RELEVANT**: Fully relevant and helpful responses
 
-To initialize the dashboard, first ensure Grafana is
-running (it starts automatically when you do `docker-compose up`).
+Color-coded gauges (green for good, red for concerning) provide immediate visual feedback on system performance quality.
 
-Then run:
+#### 4. **OpenAI Cost (Time Series)**
+Real-time tracking of API usage costs over time:
+- **Cost per conversation** in USD
+- **Cumulative spending trends**
+- **Usage spike identification**
 
-```bash
-pipenv shell
+Critical for budget monitoring and understanding operational expenses.
 
-cd grafana
+#### 5. **Model Used (Bar Chart)**
+Distribution of AI models used across conversations:
+- **gpt-4o-mini**: Most frequently used model for cost-effectiveness
+- **Other models**: Usage patterns for different model types
+- **Model performance correlation** with relevance metrics
 
-# make sure the POSTGRES_HOST variable is not overwritten 
-env | grep POSTGRES_HOST
+Helps understand model usage patterns and optimize model selection.
 
-python init.py
+#### 6. **Response Time (Time Series)**
+System performance monitoring showing:
+- **End-to-end response latency** 
+- **Performance trends over time**
+- **System bottleneck identification**
+
+Essential for maintaining optimal user experience and identifying performance issues.
+
+### Database Schema
+
+The monitoring system uses a robust PostgreSQL schema:
+
+**Conversations Table:**
+```sql
+- id, question, answer, context
+- model_used, response_time, relevance
+- prompt_tokens, completion_tokens, total_tokens
+- eval_prompt_tokens, eval_completion_tokens, eval_total_tokens  
+- openai_cost, user_language, timestamp
 ```
 
-Then go to [localhost:3000](http://localhost:3000):
+**Feedback Table:**
+```sql
+- id, conversation_id, feedback (-1 or +1), timestamp
+```
 
-- Login: "admin"
-- Password: "admin"
+### Accessing Raw Monitoring Data
 
-When prompted, keep "admin" as the new password.
+For advanced analysis, connect directly to the PostgreSQL database:
+
+```bash
+# Install pgcli (if not already installed)
+pip install pgcli
+
+# Connect to the monitoring database
+pgcli -h localhost -U user -d knowledge_base_assistant -W
+```
+
+**Useful Monitoring Queries:**
+```sql
+-- Recent conversation metrics
+SELECT question, relevance, openai_cost, response_time 
+FROM conversations 
+ORDER BY timestamp DESC LIMIT 10;
+
+-- Daily cost analysis
+SELECT DATE(timestamp) as date, 
+       ROUND(SUM(openai_cost), 4) as daily_cost,
+       COUNT(*) as conversations
+FROM conversations 
+GROUP BY DATE(timestamp) 
+ORDER BY date DESC;
+
+-- User satisfaction rates
+SELECT 
+  SUM(CASE WHEN feedback = 1 THEN 1 ELSE 0 END) as positive,
+  SUM(CASE WHEN feedback = -1 THEN 1 ELSE 0 END) as negative,
+  ROUND(AVG(CASE WHEN feedback = 1 THEN 1.0 ELSE 0.0 END) * 100, 2) as satisfaction_rate
+FROM feedback;
+```
+
+### Grafana Configuration
+
+The Grafana setup is managed through the [`grafana`](grafana/) folder:
+
+- [`init.py`](grafana/init.py) - Dashboard and datasource initialization script
+- [`dashboard.json`](grafana/dashboard.json) - Complete dashboard configuration
+- [`provisioning/`](grafana/provisioning/) - Automated Grafana provisioning
+
+The dashboard configuration is automatically initialized when the application starts, ensuring consistent monitoring setup across deployments.
+
+### Monitoring Integration
+
+The monitoring system is fully integrated into the application architecture:
+
+- **Automatic Data Collection**: Every conversation automatically logs comprehensive metrics
+- **Real-time Updates**: Dashboards refresh automatically to show live data
+- **Cost Tracking**: Precise OpenAI API cost calculation per interaction
+- **Performance Metrics**: Response time and token usage monitoring
+- **User Feedback Integration**: Direct correlation between user satisfaction and system metrics
+
+This embedded monitoring approach ensures that system health and performance insights are immediately available to users and administrators without requiring separate tools or interfaces.
 
 ## Background
 
-This section is to provide background on some tech not used in the Master and links for further reading.
+This section provides background information on key technologies used in the Knowledge Base Assistant and resources for further exploration.
 
-### Flask
+### Flask Web Framework
 
-Flask is used for creating the API interface for the application.
-It's a web application framework for Python: an endpoint can easily 
-be created  for asking questions and use web clients
-(like `curl` or `requests`) for communicating with it.
+Flask serves as the foundation for both the web interface and REST API endpoints. It provides:
 
-In this case, questions can be sent to `http://localhost:5000/question`.
+- **Lightweight Web Framework**: Minimal overhead with powerful extensibility
+- **API Development**: RESTful endpoints for programmatic access
+- **Template Engine**: Jinja2 integration for dynamic web pages
+- **Internationalization**: Flask-Babel support for multi-language interfaces
 
-For more information, visit the [official Flask documentation](https://flask.palletsprojects.com/).
+The application uses Flask's modular approach to separate concerns between web UI, API routes, and core RAG functionality.
 
+**Further Reading**: [Official Flask Documentation](https://flask.palletsprojects.com/)
 
-### Docker-compose quick reference
+### Docker Compose Orchestration
 
-A few useful commands to stop and resume the docker server (and dependencies):
-- *Stop everything*: docker-compose down
-- *Start everything in background*: docker-compose up -d
-- *View status*: docker-compose ps
-- *View logs*: docker-compose logs -f app
+Docker Compose manages the multi-service architecture, coordinating:
 
-# Stop + remove volumes (⚠️ deletes all data!)
+- **Application Container**: Main Flask application with Gunicorn
+- **PostgreSQL Database**: Persistent data storage for conversations and feedback
+- **Grafana Monitoring**: Real-time dashboards and visualization
+
+**Key Docker Compose Commands**:
+```bash
+# Start all services
+docker-compose up -d
+
+# View service status  
+docker-compose ps
+
+# View service logs
+docker-compose logs -f app
+
+# Stop services (preserve data)
+docker-compose stop
+
+# Stop and remove containers (preserve volumes)
+docker-compose down
+
+# Complete cleanup (⚠️ deletes all data)
 docker-compose down -v
+```
 
+**Further Reading**: [Docker Compose Documentation](https://docs.docker.com/compose/)
+
+### RAG Architecture Concepts
+
+The Retrieval-Augmented Generation implementation combines:
+
+- **Semantic Search**: Vector embeddings for context-aware retrieval
+- **Full-Text Search**: Traditional keyword-based search capabilities  
+- **Query Routing**: LLM-based relevance assessment and routing
+- **Multi-Language Support**: Automatic translation and localized responses
+
+Understanding these concepts helps optimize query formulation and interpret system responses.
+
+**Further Reading**: 
+- [RAG Overview](https://arxiv.org/abs/2005.11401)
+- [OpenAI Embeddings Guide](https://platform.openai.com/docs/guides/embeddings)
 
 ## Acknowledgements 
 
-I wish to thank the UCM-ntic staff for the Master in Data Science, Big Data & Business Analytics (2024-2025).
-Your exceptional organization and insightful content provided a vital foundation and ignited a passion for 
-further exploration into Data Science, AI, and state-of-the-art technologies.
+This project was developed as a Final Master's Thesis for the *Master in Data Science, Big Data & Business Analytics* (UCM-ntic, 2024-2025).
+
+Special recognition goes to **DataTalks.Club** and their **LLM Zoomcamp: Real-Life Applications of LLMs** course, which provided the foundational framework and methodology that served as the primary reference for this implementation. The course's practical approach to building production-ready RAG applications was instrumental in shaping the architecture and best practices demonstrated in this project.
+
+I wish to thank the UCM-ntic staff for their exceptional organization and insightful curriculum. The comprehensive program provided a vital foundation and ignited a passion for further exploration into Data Science, AI, and state-of-the-art technologies.
