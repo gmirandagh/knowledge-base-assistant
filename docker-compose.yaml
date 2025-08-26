@@ -28,8 +28,12 @@ services:
       AUTO_MIGRATE: ${AUTO_MIGRATE:-1}
       RUN_TIMEZONE_CHECK: ${RUN_TIMEZONE_CHECK:-1}
       TZ: ${TZ:-Europe/Berlin}
+      GRAFANA_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GRAFANA_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
     ports:
       - "${APP_PORT:-8000}:8000"
+    volumes:
+      - .:/app   
     depends_on:
       - postgres
     restart: always
@@ -46,6 +50,27 @@ services:
     depends_on:
       - postgres
     restart: always
+
+  grafana-init:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      GRAFANA_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GRAFANA_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: python grafana/init.py
+    depends_on:
+      - grafana
+      - postgres
+    restart: "no"
 
 volumes:
   postgres_data:

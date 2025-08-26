@@ -14,6 +14,9 @@ flask-babel = "*"
 psycopg2-binary = "*"
 python-dotenv = "*"
 gunicorn = "*"
+requests = "*"
+questionary = "*"
+rich = "*"
 
 [dev-packages]
 tqdm = "*"
