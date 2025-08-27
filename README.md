@@ -352,6 +352,35 @@ python test.py
 
 This script automatically selects a question from `data/ground-truth-retrieval.csv` and displays the complete API response including metrics and context sources.
 
+### Direct RAG Module (Advanced)
+
+For direct access to the RAG pipeline without the web interface, you can execute the `rag` module directly. This is useful for advanced testing, debugging, and performance evaluation.
+
+```bash
+# Set up the environment first
+pipenv shell
+
+# Basic query (defaults to English)
+python -m knowledge_base_assistant.rag "Your question here"
+
+# Query with detailed evaluation metrics
+python -m knowledge_base_assistant.rag "Your question" --evaluate
+```
+
+**Example Output:**
+```
+✅ Loaded existing index...
+🔍 Query: What is the publication year of the papers...
+--> Router decision: NO
+--> Detected a metadata query. Retrieving metadata.
+💡 Answer: The publication years of the papers are 2023 and 2024.
+📊 Metrics:
+Processing Time: 1.79 seconds
+Total Cost: $0.000259
+Total Tokens: 1529
+Relevance: RELEVANT
+Evaluation Explanation: The generated answer specifies the publication years of the papers as 2023 and 2024, which directly addresses the question about the publication year of the papers.
+```
 
 ## Code
 
