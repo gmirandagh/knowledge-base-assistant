@@ -89,6 +89,43 @@ The final, processed dataset serves as the knowledge base for the assistant.
 
 You can find the data stored in JSONL format in [`data/data.jsonl`](data/data.jsonl).
 
+
+## Dataset and ETL Pipeline
+
+The application's knowledge base is generated from a collection of PDF documents. A dedicated, robust ETL (Extract, Transform, Load) pipeline is provided in the `etl/` directory to process these source documents and create the structured `data.jsonl` file consumed by the application.
+
+The pipeline is designed with a **"LLM-first, rule-based-fallback"** approach to ensure both high-quality semantic chunking and 100% processing reliability.
+
+### Key ETL Features
+
+-   **High-Performance Text Extraction:** Uses `PyMuPDF` for fast and accurate text extraction.
+-   **LLM-Driven Metadata & Semantic Chunking:** Leverages `gpt-4o-mini` to intelligently extract metadata and segment text into coherent chunks.
+-   **Robust Fallback System:** If any LLM call fails, the pipeline automatically switches to a rule-based chunker, guaranteeing that the process never fails.
+-   **Embedding Generation:** Each chunk is converted into a vector embedding using OpenAI's `text-embedding-3-small` model.
+-   **Structured Output:** The final output is a `JSONL` file where each line represents a single chunk, enriched with a unique `chunk_id`, document metadata, and its vector embedding.
+
+### How to Process Your Own Documents
+
+To create a new knowledge base from your own PDF files, follow these steps:
+
+1.  **Place your PDFs:** Add your `.pdf` files into the `etl/input_pdfs/` directory.
+
+2.  **Run the ETL script:** From the root directory of the project, execute the following command:
+
+    ```bash
+    python etl/etl_rag.py etl/input_pdfs/
+    ```
+    The script will process all PDFs in the folder and generate output files in `etl/output/`, including `combined_index.jsonl`.
+
+3.  **Update the application's data:** Copy the final combined index to the `data/` directory and rename it to `data.jsonl`:
+
+    ```bash
+    cp etl/output/combined_index.jsonl data/data.jsonl
+    ```
+
+4.  **Restart the application:** If the application is running, restart it with `docker-compose restart app` for the new knowledge base to be loaded.
+
+
 ## Technologies
 
 - **Python 3.12** - Core application runtime
