@@ -399,7 +399,6 @@ def migrate_existing_data():
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
-            # Check if old columns exist
             cur.execute("""
                 SELECT column_name FROM information_schema.columns 
                 WHERE table_name = 'conversations' AND column_name IN 
@@ -408,10 +407,9 @@ def migrate_existing_data():
             
             existing_columns = [row[0] for row in cur.fetchall()]
             
-            if len(existing_columns) < 3:  # New columns don't exist yet
+            if len(existing_columns) < 3:
                 print("Adding new monitoring columns to existing conversations table...")
                 
-                # Add new columns with defaults
                 new_columns = [
                     "ADD COLUMN IF NOT EXISTS model_used TEXT",
                     "ADD COLUMN IF NOT EXISTS response_time FLOAT",
@@ -430,7 +428,6 @@ def migrate_existing_data():
                 for column_def in new_columns:
                     cur.execute(f"ALTER TABLE conversations {column_def}")
                 
-                # Add indexes
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_conversations_timestamp ON conversations(timestamp DESC);")
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_conversations_relevance ON conversations(relevance);")
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_feedback_conversation_id ON feedback(conversation_id);")
