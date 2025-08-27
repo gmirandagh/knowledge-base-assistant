@@ -46,8 +46,8 @@ Below is a screenshot of the main web interface, showing the chat application al
 Watch a full video demo of the project, including setup and usage instructions:
 
 <p align="center">
-  <a href="https://www.youtube.com/watch?v=RiQcSHzR8_E">
-    <img src="https://markdown-videos-api.jorgenkh.no/youtube/RiQcSHzR8_E" alt="Video Demo">
+  <a href="">
+    <img src="" alt="Video Demo">
   </a>
 </p>
 
