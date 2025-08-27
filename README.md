@@ -268,10 +268,12 @@ The primary way to interact with the Knowledge Base Assistant is through the web
 For power users and testing, use the command-line interface:
 
 ```bash
+# cli.py uses BASE_URL from .env (default: http://localhost:8000)
+
 # Basic interactive mode
 python cli.py
 
-# Use random questions from ground truth dataset
+# Test with random question from ground truth dataset
 python cli.py --random
 
 # Custom ground truth file
@@ -673,7 +675,7 @@ Understanding these concepts helps optimize query formulation and interpret syst
 
 ## Acknowledgements 
 
-This project was developed as a Final Master's Thesis for the *Master in Data Science, Big Data & Business Analytics* (UCM-ntic, 2024-2025).
+This project was developed as a Final Master's Thesis for the *Data Science, Big Data & Business Analytics Masters Program* (UCM-ntic, 2024-2025).
 
 Special recognition goes to **DataTalks.Club** and their **LLM Zoomcamp: Real-Life Applications of LLMs** course, which provided the foundational framework and methodology that served as the primary reference for this implementation. The course's practical approach to building production-ready RAG applications was instrumental in shaping the architecture and best practices demonstrated in this project.
 

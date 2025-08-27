@@ -25,11 +25,29 @@ def init_db():
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
-            # Clean start
-            cur.execute("DROP TABLE IF EXISTS feedback;")
-            cur.execute("DROP TABLE IF EXISTS conversations;")
+            cur.execute("""
+                SELECT COUNT(*) FROM information_schema.tables 
+                WHERE table_name IN ('conversations', 'feedback')
+            """)
+            table_count = cur.fetchone()[0]
+            
+            if table_count > 0:
+                cur.execute("SELECT COUNT(*) FROM conversations")
+                conversation_count = cur.fetchone()[0]
+                
+                if conversation_count > 0:
+                    print(f"✅ Database already initialized with {conversation_count} conversations. Skipping destructive initialization.")
+                    return
+                else:
+                    print("📊 Tables exist but are empty. Proceeding with safe initialization...")
+            
+            print("🏗️ Creating database tables...")
+            
+            if table_count > 0:
+                print("⚠️ Dropping existing empty tables...")
+                cur.execute("DROP TABLE IF EXISTS feedback;")
+                cur.execute("DROP TABLE IF EXISTS conversations;")
 
-            # Enhanced conversations table with monitoring fields
             cur.execute("""
                 CREATE TABLE conversations (
                     id TEXT PRIMARY KEY,
@@ -52,7 +70,6 @@ def init_db():
                 );
             """)
 
-            # Enhanced feedback table
             cur.execute("""
                 CREATE TABLE feedback (
                     id SERIAL PRIMARY KEY,
@@ -62,13 +79,16 @@ def init_db():
                 );
             """)
             
-            # Index for better query performance
-            cur.execute("CREATE INDEX idx_conversations_timestamp ON conversations(timestamp DESC);")
-            cur.execute("CREATE INDEX idx_conversations_relevance ON conversations(relevance);")
-            cur.execute("CREATE INDEX idx_feedback_conversation_id ON feedback(conversation_id);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_conversations_timestamp ON conversations(timestamp DESC);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_conversations_relevance ON conversations(relevance);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_feedback_conversation_id ON feedback(conversation_id);")
             
         conn.commit()
-        print("Database tables created successfully with monitoring enhancements.")
+        print("✅ Database tables created successfully with monitoring enhancements.")
+    except Exception as e:
+        print(f"❌ Database initialization failed: {e}")
+        conn.rollback()
+        raise
     finally:
         conn.close()
 

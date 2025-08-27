@@ -9,14 +9,10 @@ from rich.panel import Panel
 from rich.table import Table
 from questionary import prompt
 
-# Get base URL from environment variable or use default
 BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
 DEFAULT_CSV_FILE = "data/ground-truth-retrieval.csv"
 
 console = Console()
-
-# ... (All your other functions like get_random_question, ask_question, send_feedback, etc., remain here) ...
-# I am omitting them for brevity, but they should be in your file.
 
 def get_random_question(file_path: str):
     """Picks a random question from the ground truth CSV."""
@@ -39,7 +35,9 @@ def get_random_question(file_path: str):
 def ask_question(question: str, enable_monitoring: bool):
     """Sends a question to the RAG API."""
     url = f"{BASE_URL}/ask"
-    payload = {"question": question, "enable_monitoring": enable_monitoring}
+    payload = {"question": question}
+    if enable_monitoring:
+        payload["enable_monitoring"] = True
     try:
         response = requests.post(url, json=payload, timeout=60)
         response.raise_for_status()
@@ -92,11 +90,9 @@ def handle_feedback(conversation_id: str):
         else:
             console.print("[red]Failed to send feedback.[/red]")
 
-# <--- THIS IS THE NEW FUNCTION --->
 def display_system_metrics():
     """Fetches and displays key system metrics from the app's API."""
     try:
-        # Fetch data from the two stats endpoints
         conv_response = requests.get(f"{BASE_URL}/stats/conversations?days=7", timeout=10)
         feed_response = requests.get(f"{BASE_URL}/stats/feedback", timeout=10)
         conv_response.raise_for_status()
@@ -140,7 +136,6 @@ def main():
     console.print(Panel("[bold green]Welcome to the Knowledge Base Assistant CLI![/bold green]", expand=False))
     console.print("Press Ctrl+C to exit.")
 
-    # Show initial system health
     display_system_metrics()
 
     while True:
@@ -168,7 +163,6 @@ def main():
             
             console.print("-" * 50)
             
-            # --- ADD THIS CALL AT THE END OF THE LOOP ---
             display_system_metrics()
 
         except (KeyboardInterrupt, EOFError):

@@ -17,7 +17,8 @@ question = df.sample(n=1).iloc[0]['question']
 print(f"Testing with question: \"{question}\"")
 print("-" * 30)
 
-url = "http://localhost:8000/ask"
+BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
+url = f"{BASE_URL}/ask"
 
 data = {"question": question}
 
