@@ -37,6 +37,13 @@ from dataclasses import dataclass, asdict
 from typing import List, Dict, Optional, Iterable, Union
 
 from tqdm import tqdm
+import pandas as pd
+
+try:
+    import minsearch
+except ImportError:
+    minsearch = None
+import pickle
 
 try:
     import fitz
@@ -49,7 +56,6 @@ try:
 except Exception:
     pass
 
-# OpenAI client
 try:
     from openai import OpenAI
     _OPENAI_AVAILABLE = True
@@ -57,7 +63,6 @@ except Exception:
     _OPENAI_AVAILABLE = False
 
 
-# Config
 DEFAULT_TEXT_MODEL = os.getenv("TEXT_MODEL", "gpt-4o-mini")
 DEFAULT_EMBED_MODEL = os.getenv("EMBED_MODEL", "text-embedding-3-small")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -74,9 +79,26 @@ if _OPENAI_AVAILABLE and OPENAI_API_KEY:
 MAX_CHUNK_CHARS = int(os.getenv("MAX_CHUNK_CHARS", "1800"))  # split oversized chunks by sentence
 MIN_CHARS_TO_KEEP = int(os.getenv("MIN_CHARS_TO_KEEP", "40"))  # drop very small fragments
 
-# IO
-OUTPUT_DIR = os.getenv("OUTPUT_DIR", "rag_out")
-COMBINED_INDEX = os.getenv("COMBINED_INDEX", "combined_index.jsonl")
+
+# Data paths - ETL outputs only, manual promotion to production
+PROJECT_ROOT = os.getenv('PROJECT_ROOT', os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+pdf_path = os.path.join(PROJECT_ROOT, 'etl', 'input_pdfs')
+ETL_OUTPUT_DIR = os.path.join(PROJECT_ROOT, 'etl', 'output')
+
+# ETL output paths (safe staging area)
+etl_output_data_path = os.path.join(ETL_OUTPUT_DIR, 'data.jsonl')
+etl_output_data_csv_path = os.path.join(ETL_OUTPUT_DIR, 'data.csv')
+etl_output_data_index_path = os.path.join(ETL_OUTPUT_DIR, 'data_index.bin')
+etl_output_ground_truth_retrieval_data_path = os.path.join(ETL_OUTPUT_DIR, 'ground-truth-retrieval.csv')
+
+# Production data paths (for reference only - no direct writes)
+DATA_DIR = os.path.join(PROJECT_ROOT, 'data')
+data_path = os.path.join(DATA_DIR, 'data.jsonl')
+data_csv_path = os.path.join(DATA_DIR, 'data.csv')
+data_index_path = os.path.join(DATA_DIR, 'data_index.bin')
+ground_truth_retrieval_data_path = os.path.join(DATA_DIR, 'ground-truth-retrieval.csv')
+
 
 # Logging
 logging.basicConfig(
@@ -297,13 +319,6 @@ EXAMPLE OUTPUT STRUCTURE:
   }}
 ]
 """.strip()
-
-    return prompt_template.format(
-        page_text=page_text,
-        page_number=page_number,
-        document_id=document_id,
-        metadata_obj_str=json.dumps(metadata_obj, ensure_ascii=False)
-    )
 
     return prompt_template.format(
         page_text=page_text,
@@ -535,8 +550,51 @@ def write_jsonl(records: Iterable[Dict], path: str):
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
 
 
+def generate_csv_from_jsonl(jsonl_path: str, csv_path: str):
+    """Generate a CSV file from JSONL, removing embeddings and flattening document_metadata."""
+    logger.info(f"Generating CSV from: {jsonl_path}")
+    
+    if not os.path.exists(jsonl_path):
+        logger.error(f"JSONL file not found: {jsonl_path}")
+        return
+    
+    # Load documents
+    documents = []
+    with open(jsonl_path, 'rt', encoding='utf-8') as f_in:
+        for line in f_in:
+            doc = json.loads(line)
+            doc.pop('embedding', None)  # Remove embedding field
+            documents.append(doc)
+    
+    if not documents:
+        logger.warning("No documents found in JSONL file")
+        return
+    
+    # Convert to DataFrame and flatten metadata
+    df = pd.DataFrame(documents)
+    
+    # Flatten document_metadata if it exists
+    if 'document_metadata' in df.columns:
+        metadata_df = pd.json_normalize(df['document_metadata'])
+        # Rename conflicting columns
+        metadata_df.rename(columns={
+            'title': 'document_title', 
+            'url': 'document_url'
+        }, inplace=True)
+        df = df.drop(columns=['document_metadata']).join(metadata_df)
+    
+    # Final check to remove any remaining embedding columns
+    if 'embedding' in df.columns:
+        df = df.drop(columns=['embedding'])
+    
+    # Save to CSV
+    ensure_dir(str(Path(csv_path).parent))
+    df.to_csv(csv_path, index=False, encoding='utf-8')
+    logger.info(f"✅ CSV saved to: {csv_path} (records={len(df)})")
+
+
 def cli(input_path: str):
-    ensure_dir(OUTPUT_DIR)
+    ensure_dir(ETL_OUTPUT_DIR)
     input_path = Path(input_path)
     pdfs = []
     if input_path.is_file() and input_path.suffix.lower() == ".pdf":
@@ -550,21 +608,275 @@ def cli(input_path: str):
     for pdf in tqdm(pdfs, desc="Documents"):
         try:
             chunks = process_pdf(pdf)
-            out_path = Path(OUTPUT_DIR) / (Path(pdf).stem + ".jsonl")
+            out_path = Path(ETL_OUTPUT_DIR) / (Path(pdf).stem + ".jsonl")
             write_jsonl(chunks, str(out_path))
             combined.extend(chunks)
         except Exception as e:
             logger.error(f"Failed: {pdf} ({e})")
 
-    # Combined index
-    combined_path = Path(OUTPUT_DIR) / COMBINED_INDEX
-    write_jsonl(combined, str(combined_path))
-    logger.info(f"Wrote combined index: {combined_path} (records={len(combined)})")
+    # Save combined JSONL to ETL output only
+    write_jsonl(combined, etl_output_data_path)
+    logger.info(f"✅ Combined JSONL saved to: {etl_output_data_path} (records={len(combined)})")
+    
+    # Generate CSV version without embeddings
+    generate_csv_from_jsonl(etl_output_data_path, etl_output_data_csv_path)
+    
+    logger.info(f"""
+📁 ETL Processing Complete! Files saved to: {ETL_OUTPUT_DIR}
+   - data.jsonl: {len(combined)} records
+   - data.csv: CSV version without embeddings
+   - Individual PDFs: {len(pdfs)} files processed
+
+🔄 Next steps:
+   1. Review the generated files in etl/output/
+   2. Build search index: python etl_rag.py --index etl/output/data.jsonl
+   3. Generate Q&A pairs: python etl_rag.py --generate-qa etl/output/data.jsonl  
+   4. Manually copy to data/ directory when satisfied with quality
+    """)
+
+
+def build_minsearch_index(jsonl_path: str, output_path: str):
+    """Builds and saves a Minsearch index from a JSONL file to ETL output directory only."""
+    if not minsearch:
+        raise RuntimeError("Minsearch is not installed. Please `pip install minsearch`.")
+    
+    logger.info(f"Building Minsearch index from: {jsonl_path}")
+    
+    with open(jsonl_path, 'rt', encoding='utf-8') as f_in:
+        docs = [json.loads(line) for line in f_in]
+
+    documents = [doc for doc in docs if doc.get('text')]  # Use 'text' field instead of 'embedding'
+    
+    index = minsearch.Index(
+        text_fields=["text"],
+        keyword_fields=["title", "document_id", "chunk_type", "section_title"]
+    )
+    index.fit(documents)
+
+    # Save only to ETL output directory
+    ensure_dir(str(Path(etl_output_data_index_path).parent))
+    with open(etl_output_data_index_path, 'wb') as f_out:
+        pickle.dump(index, f_out)
+
+    logger.info(f"✅ Minsearch index with {len(documents)} records saved to: {etl_output_data_index_path}")
+    logger.info(f"""
+🔍 Search Index Built Successfully!
+   - Records indexed: {len(documents)}
+   - Output: {etl_output_data_index_path}
+   
+🔄 Next step: Copy to data/ directory when ready:
+   cp {etl_output_data_index_path} {data_index_path}
+    """)
+
+
+# Ground Truth Generation Functions
+PROMPT_TEMPLATE = """
+You are an AI assistant tasked with creating a high-quality ground-truth dataset for evaluating a Retrieval-Augmented Generation (RAG) system.
+Your role is to act as an inquisitive researcher or engineer and generate **5 distinct, realistic, and high-quality questions** that can be **completely answered** using only the information in the provided CONTEXT.
+
+### RULES:
+1. **Exactly Five Questions**: Produce precisely 5 questions, no more, no less.
+2. **Grounded in Context**: Each question must be answerable *exclusively* from the provided CONTEXT. Do not introduce outside knowledge.
+3. **Realistic User Queries**: Formulate questions as if they were asked by a real person seeking information. Avoid exam-style or trivial "fill-in-the-blank" questions.
+4. **Clarity and Precision**: Questions should be well-structured, specific, and self-contained. Avoid ambiguity and overly short phrasing.
+5. **No Copy-Paste**: Do not copy sentences verbatim from the CONTEXT. Always rephrase naturally, ensuring the question sounds conversational.
+6. **Variety of Question Types**: Mix styles and intents (e.g., definitions, comparisons, processes, causes/effects, implications, factual lookups). At least one "how/why" style question is required.
+7. **Balanced Scope**: Avoid questions that are either too broad ("Explain everything about…") or too narrow ("What is the third word in…"). Each question should target a meaningful, self-contained piece of information.
+
+### CONTEXT:
+---
+Source Document: {title}
+Section: {section_title} (Page {page_number})
+Content: {content}
+---
+
+### OUTPUT FORMAT:
+Return the result as a single valid parsable JSON (without markdown/code block formatting), exactly in this structure:
+{{"questions": ["question1", "question2", "question3", "question4", "question5"]}}
+""".strip()
+
+MAX_RETRIES = 3
+
+def generate_questions(doc: Dict, model: Optional[str] = None) -> str:
+    """Generate questions for a document chunk using LLM."""
+    if CLIENT is None:
+        raise RuntimeError("OpenAI client not configured. Set OPENAI_API_KEY (and optionally OPENAI_BASE_URL).")
+    
+    model = model or DEFAULT_TEXT_MODEL
+    
+    prompt = PROMPT_TEMPLATE.format(
+        title=doc.get('title', 'Unknown Document'),
+        section_title=doc.get('section_title', 'Unknown Section'),
+        page_number=doc.get('page_number', 'Unknown'),
+        content=doc.get('content', '')
+    )
+    
+    response = CLIENT.chat.completions.create(
+        model=model,
+        messages=[{"role": "user", "content": prompt}]
+    )
+    
+    return response.choices[0].message.content
+
+def safe_generate_questions(doc: Dict, max_retries: int = MAX_RETRIES) -> Dict:
+    """
+    Generate questions and ensure valid JSON output.
+    Retries up to `max_retries` times if JSON decoding fails.
+    """
+    if CLIENT is None:
+        logger.warning("OpenAI client not configured. Skipping question generation.")
+        return {"questions": []}
+    
+    for attempt in range(1, max_retries + 1):
+        try:
+            questions_raw = generate_questions(doc)
+            questions = json.loads(questions_raw)
+            
+            # Ensure expected structure
+            if isinstance(questions, dict) and "questions" in questions:
+                return questions
+            else:
+                raise ValueError("Invalid JSON structure, missing 'questions' key")
+                
+        except Exception as e:
+            logger.warning(f"[Attempt {attempt}/{max_retries}] JSON parsing failed for doc {doc.get('id', 'unknown')}: {e}")
+            
+            if attempt < max_retries:
+                # Try to fix malformed JSON
+                try:
+                    fix_prompt = f"""
+                    The following text was supposed to be valid JSON but is malformed:
+                    
+                    {questions_raw}
+                    
+                    Please return ONLY a valid JSON object in the form:
+                    {{"questions": ["question1", "question2", "question3", "question4", "question5"]}}
+                    """
+                    
+                    response = CLIENT.chat.completions.create(
+                        model=DEFAULT_TEXT_MODEL,
+                        messages=[{"role": "user", "content": fix_prompt}]
+                    )
+                    questions_raw = response.choices[0].message.content
+                    time.sleep(1)  # Rate limiting
+                    
+                except Exception as fix_error:
+                    logger.warning(f"Failed to fix JSON: {fix_error}")
+                    time.sleep(1)
+    
+    # Log and skip when failed
+    logger.error(f"❌ Failed to get valid JSON after {max_retries} attempts for doc {doc.get('id', 'unknown')}")
+    return {"questions": []}
+
+def generate_ground_truth_qa(jsonl_path: str):
+    """Generate ground truth Q&A pairs from a JSONL file and save to ETL output directory only."""
+    logger.info(f"Loading document chunks from: {jsonl_path}")
+    
+    if not os.path.exists(jsonl_path):
+        raise FileNotFoundError(f"JSONL file not found: {jsonl_path}")
+    
+    # Load documents
+    documents = []
+    with open(jsonl_path, 'rt', encoding='utf-8') as f_in:
+        for line in f_in:
+            doc = json.loads(line)
+            doc.pop('embedding', None)  # Remove embedding field if present
+            documents.append(doc)
+    
+    logger.info(f"Successfully loaded {len(documents)} document chunks")
+    
+    if not documents:
+        logger.warning("No documents found in JSONL file")
+        return
+    
+    # Check document structure
+    logger.info(f"Document keys: {list(documents[0].keys())}")
+    
+    # Generate questions for each document
+    results = {}
+    
+    logger.info("Generating questions for documents...")
+    for doc in tqdm(documents, desc="Generating Q&A pairs"):
+        doc_id = doc.get('id') or doc.get('chunk_id', str(uuid.uuid4()))
+        
+        if doc_id in results:
+            continue
+            
+        questions_result = safe_generate_questions(doc)
+        results[doc_id] = questions_result.get('questions', [])
+        
+        # Add small delay to avoid hitting rate limits
+        time.sleep(0.1)
+    
+    # Flatten results into list of (doc_id, question) pairs
+    final_results = []
+    for doc_id, questions in results.items():
+        for q in questions:
+            if q.strip():  # Only add non-empty questions
+                final_results.append((doc_id, q.strip()))
+    
+    logger.info(f"Generated {len(final_results)} Q&A pairs")
+    
+    if not final_results:
+        logger.warning("No Q&A pairs were generated")
+        return
+    
+    # Create DataFrame and save to ETL output directory only
+    df_results = pd.DataFrame(final_results, columns=['id', 'question'])
+    
+    ensure_dir(str(Path(etl_output_ground_truth_retrieval_data_path).parent))
+    df_results.to_csv(etl_output_ground_truth_retrieval_data_path, index=False, encoding='utf-8')
+    
+    logger.info(f"✅ Ground truth Q&A pairs saved to: {etl_output_ground_truth_retrieval_data_path}")
+    logger.info(f"""
+❓ Q&A Generation Complete!
+   - Generated: {len(final_results)} question-answer pairs
+   - Output: {etl_output_ground_truth_retrieval_data_path}
+   
+🔄 Next step: Copy to data/ directory when ready:
+   cp {etl_output_ground_truth_retrieval_data_path} {ground_truth_retrieval_data_path}
+    """)
+    
+    return len(final_results)
 
 
 if __name__ == "__main__":
     import argparse
-    ap = argparse.ArgumentParser(description="ETL for RAG + Minsearch")
-    ap.add_argument("input", help="PDF file or folder")
-    args = ap.parse_args()
-    cli(args.input)
+    parser = argparse.ArgumentParser(
+        description="ETL and data processing pipeline for the Knowledge Base Assistant.",
+        formatter_class=argparse.RawTextHelpFormatter
+    )
+    # .jsonl
+    parser.add_argument(
+        "path",
+        nargs='?',
+        default=None,
+        help="Path to a PDF file or a folder containing PDFs for processing."
+    )
+    # /bin
+    parser.add_argument(
+        "--index",
+        metavar="JSONL_FILE",
+        help="Build a Minsearch index from the specified combined JSONL file."
+    )
+
+    # ground-truth-retrieval.csv
+    parser.add_argument(
+        "--generate-qa", 
+        metavar="JSONL_FILE", 
+        help="Generate Q&A pairs for evaluation from the specified JSONL file."
+    )
+
+
+    args = parser.parse_args()
+
+    if args.path:
+        cli(args.path)
+    elif args.index:
+        output_index_path = "data/data_index.bin"
+        build_minsearch_index(args.index, output_index_path)
+    elif args.generate_qa:
+        generate_ground_truth_qa(args.generate_qa)
+    else:
+        parser.print_help()
+        raise SystemExit("\nError: You must specify a PDF path for processing, use --index to build search index, or use --generate-qa to generate Q&A pairs.")
