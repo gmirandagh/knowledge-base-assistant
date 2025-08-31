@@ -40,7 +40,7 @@ This project was developed as a Final Master's Thesis for the *Master in Data Sc
 Below is a screenshot of the main web interface, showing the chat application alongside the embedded, real-time Grafana monitoring dashboard.
 
 <p align="center">
-  <img src="images/image.png" alt="Web UI with Embedded Grafana Dashboard">
+  <img src="images/User-interface-web_UI.png" alt="Web UI with Embedded Grafana Dashboard">
 </p>
 
 Watch a full video demo of the project, including setup and usage instructions:
