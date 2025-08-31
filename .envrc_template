@@ -1,22 +1,37 @@
-# PostgreSQL
-POSTGRES_DB=knowledge_base_assistant
-POSTGRES_USER=user
-POSTGRES_PASSWORD=password
-POSTGRES_PORT=5432
+# PostgreSQL Configuration
+export POSTGRES_DB=knowledge_base_assistant
+export POSTGRES_USER=user
+export POSTGRES_PASSWORD=your_postgres_password_here
+export POSTGRES_PORT=5432
 
-# Application
-export OPENAI_API_KEY='YOUR_KEY'
-APP_PORT=8000
+# Application Configuration
+export OPENAI_API_KEY=your_openai_api_key_here
+export APP_HOST=localhost
+export APP_PORT=8000
+export BASE_URL=http://${APP_HOST}:${APP_PORT}
+
+# LLM Configuration
+export TEXT_MODEL=gpt-4o-mini
+export EMBED_MODEL=text-embedding-3-small
+
+# ETL Configuration
+export PROJECT_ROOT=  # Leave empty for auto-detection or set absolute path
+export MAX_CHUNK_CHARS=1800
+export MIN_CHARS_TO_KEEP=40
 
 # Monitoring Configuration
-ENABLE_MONITORING=1
-AUTO_MIGRATE=1
-RUN_TIMEZONE_CHECK=1
-TZ=Europe/Berlin
+export ENABLE_MONITORING=1
+export AUTO_MIGRATE=1
+export RUN_TIMEZONE_CHECK=1
+export TZ=Europe/Berlin
 
-# Grafana
-GRAFANA_ADMIN_USER=admin
-GRAFANA_ADMIN_PASSWORD='YOUR_PASSWORD'
-GRAFANA_DASHBOARD_UID='YOUR_UID'
+# Grafana Configuration
+export GRAFANA_ADMIN_USER=admin
+export GRAFANA_ADMIN_PASSWORD=your_grafana_admin_password_here
+export GRAFANA_DASHBOARD_UID=7c958298-4d27-4668-b7c3-f1518e0c9dbd
 
-
+# Instructions for setup:
+# 1. Copy this file to .envrc: cp .envrc_template .envrc
+# 2. Update the placeholder values with your actual credentials
+# 3. If using direnv: direnv allow
+# 4. If not using direnv, source manually: source .envrc

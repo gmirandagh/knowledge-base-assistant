@@ -92,38 +92,103 @@ You can find the data stored in JSONL format in [`data/data.jsonl`](data/data.js
 
 ## Dataset and ETL Pipeline
 
-The application's knowledge base is generated from a collection of PDF documents. A dedicated, robust ETL (Extract, Transform, Load) pipeline is provided in the `etl/` directory to process these source documents and create the structured `data.jsonl` file consumed by the application.
+The application's knowledge base is generated from a collection of PDF documents. A comprehensive, production-ready ETL (Extract, Transform, Load) pipeline is provided in the `etl/` directory to process source documents and create all necessary data files for the application.
 
-The pipeline is designed with a **"LLM-first, rule-based-fallback"** approach to ensure both high-quality semantic chunking and 100% processing reliability.
+The pipeline follows a **"LLM-first, rule-based-fallback"** architecture with **staging-first, manual-promotion** workflow to ensure both high-quality semantic processing and production data safety.
 
 ### Key ETL Features
 
--   **High-Performance Text Extraction:** Uses `PyMuPDF` for fast and accurate text extraction.
--   **LLM-Driven Metadata & Semantic Chunking:** Leverages `gpt-4o-mini` to intelligently extract metadata and segment text into coherent chunks.
--   **Robust Fallback System:** If any LLM call fails, the pipeline automatically switches to a rule-based chunker, guaranteeing that the process never fails.
--   **Embedding Generation:** Each chunk is converted into a vector embedding using OpenAI's `text-embedding-3-small` model.
--   **Structured Output:** The final output is a `JSONL` file where each line represents a single chunk, enriched with a unique `chunk_id`, document metadata, and its vector embedding.
+- **High-Performance Text Extraction:** Uses `PyMuPDF` for fast and accurate PDF text extraction with layout awareness
+- **LLM-Driven Intelligence:** Leverages `gpt-4o-mini` for metadata extraction, semantic chunking, and Q&A pair generation
+- **Robust Fallback System:** Automatic rule-based fallback ensures 100% processing reliability even when LLM calls fail
+- **Multi-Format Output:** Generates both JSONL (with embeddings) and CSV (without embeddings) for different use cases
+- **Vector Embeddings:** Each chunk gets vector embeddings using OpenAI's `text-embedding-3-small` for semantic search
+- **Safe Staging Workflow:** All outputs go to `etl/output/` staging area to prevent accidental production data corruption
+- **Search Index Generation:** Builds optimized Minsearch indices for fast retrieval
+- **Evaluation Dataset:** Generates ground truth Q&A pairs for RAG system evaluation
 
-### How to Process Your Own Documents
 
-To create a new knowledge base from your own PDF files, follow these steps:
+### ETL Pipeline Outputs
 
-1.  **Place your PDFs:** Add your `.pdf` files into the `etl/input_pdfs/` directory.
+The pipeline generates four key files in the `etl/output/` staging directory:
 
-2.  **Run the ETL script:** From the root directory of the project, execute the following command:
+1. **`data.jsonl`** - Complete document chunks with embeddings and metadata
+2. **`data.csv`** - Same data in CSV format without embeddings (for analysis/debugging)
+3. **`data_index.bin`** - Optimized Minsearch index for fast document retrieval
+4. **`ground-truth-retrieval.csv`** - Q&A pairs for system evaluation and testing
 
-    ```bash
-    python etl/etl_rag.py etl/input_pdfs/
-    ```
-    The script will process all PDFs in the folder and generate output files in `etl/output/`, including `combined_index.jsonl`.
+### Processing Your Own Documents
 
-3.  **Update the application's data:** Copy the final combined index to the `data/` directory and rename it to `data.jsonl`:
+#### Prerequisites
 
-    ```bash
-    cp etl/output/combined_index.jsonl data/data.jsonl
-    ```
+1. **Install dependencies:**
+   ```bash
+   pip install openai pymupdf python-dotenv tqdm rapidfuzz minsearch pandas
+   ```
 
-4.  **Restart the application:** If the application is running, restart it with `docker-compose restart app` for the new knowledge base to be loaded.
+2. **Set up environment variables:**
+   ```bash
+   cp .envrc_template .envrc
+   # Edit .envrc with your OpenAI API key and other settings
+   source .envrc  # or use direnv
+   ```
+
+#### Step-by-Step Workflow
+
+1. **Place your PDFs:** Add your `.pdf` files into the `etl/input_pdfs/` directory.
+
+2. **Process documents:** Extract, chunk, and generate embeddings:
+   ```bash
+   python etl/etl_rag.py etl/input_pdfs/
+   ```
+   This creates `data.jsonl` and `data.csv` in `etl/output/`
+
+3. **Build search index:** Create optimized search index:
+   ```bash
+   python etl/etl_rag.py --index etl/output/data.jsonl
+   ```
+   This creates `data_index.bin` in `etl/output/`
+
+4. **Generate Q&A pairs:** Create evaluation dataset:
+   ```bash
+   python etl/etl_rag.py --generate-qa etl/output/data.jsonl
+   ```
+   This creates `ground-truth-retrieval.csv` in `etl/output/`
+
+5. **Review and validate:** Inspect all generated files in `etl/output/` directory to ensure quality.
+
+6. **Promote to production:** When satisfied with the results, manually copy files:
+   ```bash
+   cp etl/output/data.jsonl data/
+   cp etl/output/data.csv data/
+   cp etl/output/data_index.bin data/
+   cp etl/output/ground-truth-retrieval.csv data/
+   ```
+
+7. **Restart application:** 
+   ```bash
+   docker-compose restart app
+   ```
+
+### Configuration Options
+
+Customize the ETL process via environment variables in `.envrc`:
+
+- **`TEXT_MODEL`**: LLM model for chunking and Q&A generation (default: `gpt-4o-mini`)
+- **`EMBED_MODEL`**: Embedding model for vectors (default: `text-embedding-3-small`)
+- **`MAX_CHUNK_CHARS`**: Maximum characters per chunk (default: `1800`)
+- **`MIN_CHARS_TO_KEEP`**: Minimum chunk size to retain (default: `40`)
+- **`PROJECT_ROOT`**: Custom project root path (default: auto-detected)
+
+### Production Safety Features
+
+- **Staging-First Workflow:** All outputs go to `etl/output/` first, requiring manual promotion
+- **No Direct Production Writes:** Prevents accidental corruption of live application data  
+- **Quality Gates:** Review generated files before promoting to production
+- **Rollback Capability:** Keep previous versions for easy rollback if needed
+- **Comprehensive Logging:** Detailed logs help troubleshoot any processing issues
+
+This architecture ensures both data quality and production system stability.
 
 
 ## Technologies
