@@ -53,6 +53,38 @@ msgstr "¡Gracias por tus comentarios!"
 msgid "Sources"
 msgstr "Fuentes"
 
+#: templates/index.html:59
+msgid "System Monitoring Dashboard"
+msgstr "Panel de Monitoreo del Sistema"
+
+#: templates/index.html:62
+msgid "Last 5 conversations"
+msgstr "Últimas 5 conversaciones"
+
+#: templates/index.html:66
+msgid "+1/-1 Feedback"
+msgstr "Comentarios +1/-1"
+
+#: templates/index.html:70
+msgid "Relevancy"
+msgstr "Relevancia"
+
+#: templates/index.html:74
+msgid "OpenAI cost"
+msgstr "Costo OpenAI"
+
+#: templates/index.html:78
+msgid "Tokens"
+msgstr "Tokens"
+
+#: templates/index.html:82
+msgid "Model used"
+msgstr "Modelo utilizado"
+
+#: templates/index.html:86
+msgid "Response time"
+msgstr "Tiempo de respuesta"
+
 #: templates/index.html:63
 msgid "Thinking..."
 msgstr "Pensando..."

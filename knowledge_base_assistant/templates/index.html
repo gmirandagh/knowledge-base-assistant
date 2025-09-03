@@ -59,10 +59,9 @@
         .language-switcher { position: absolute; top: 15px; right: 20px; font-size: 0.9rem; }
         .language-switcher a { color: var(--accent-color); text-decoration: none; } .language-switcher a:hover { text-decoration: underline; }
 
-        /* Dashboard Grid Layout */
         .dashboard-grid {
             display: grid;
-            grid-template-columns: repeat(6, 1fr); /* Using a 6-column grid for flexibility */
+            grid-template-columns: repeat(6, 1fr);
             gap: 1.5rem;
             margin-top: 1rem;
         }
@@ -75,13 +74,11 @@
         .grafana-panel h4 { margin-top: 0; text-align: left; font-size: 1rem; }
         .grafana-panel iframe { width: 100%; height: 280px; border: none; }
         
-        /* Spanning rules for grid items */
         .panel-full-width { grid-column: span 6; }
         .panel-third { grid-column: span 2; }
         .panel-two-thirds { grid-column: span 4; }
         .panel-half { grid-column: span 3; }
         
-        /* Responsive adjustments */
         @media (max-width: 1024px) {
             .panel-third, .panel-two-thirds, .panel-half { grid-column: span 6; }
         }
@@ -149,8 +146,6 @@
 {% endif %}
 
 <script>
-    // This script block remains the same as your original, as it controls the chat functionality perfectly.
-    // The monitoring dashboard does not require any additional JavaScript.
     
     const translations = {
         thinking: "{{ _('Thinking...') }}", ask: "{{ _('Ask') }}", error: "{{ _('An error occurred. Please try again.') }}",
