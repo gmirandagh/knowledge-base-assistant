@@ -17,6 +17,7 @@ gunicorn = "*"
 requests = "*"
 questionary = "*"
 rich = "*"
+pymupdf = "*"
 
 [dev-packages]
 tqdm = "*"
