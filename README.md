@@ -47,9 +47,10 @@ Watch a full video demo of the project, including setup and usage instructions:
 
 <p align="center">
   <a href="https://youtu.be/sty5jYTauF0" target="_blank">
-    <img src="https://youtu.be/sty5jYTauF0/0.jpg" alt="Video Demo" width="600">
+    <img src="https://img.youtube.com/vi/sty5jYTauF0/0.jpg" alt="Video Demo" width="600">
   </a>
 </p>
+
 
 
 ## Project Overview
